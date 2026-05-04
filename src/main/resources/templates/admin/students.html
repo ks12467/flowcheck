@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('수강생 관리')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <h1 class="page-title">수강생 관리</h1>
+
+        <!-- 트랙 선택 -->
+        <div class="card" style="padding:16px 24px;">
+            <div class="flex gap-8">
+                <select class="form-control" id="trackSelect" style="max-width:280px;"
+                        onchange="loadStudents()">
+                    <option value="">트랙을 선택하세요</option>
+                    <option th:each="t : ${allTracks}"
+                            th:value="${t.id}"
+                            th:text="${t.name}">트랙명</option>
+                </select>
+                <button class="btn btn-primary" onclick="openAddModal()" id="btnAdd" disabled>+ 수강생 등록</button>
+                <button class="btn btn-outline" onclick="openBulkModal()" id="btnBulk" disabled>일괄 등록</button>
+            </div>
+        </div>
+
+        <!-- 수강생 테이블 -->
+        <div class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>이메일</th>
+                            <th>연락처</th>
+                            <th>위험군</th>
+                            <th>최근 제출일</th>
+                            <th style="width:120px;text-align:center;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">
+                                트랙을 선택하면 수강생 목록이 표시됩니다.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 수강생 등록 모달 -->
+<div class="modal-overlay" id="addModal" onclick="closeModal('addModal', event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">수강생 등록</h2>
+            <button class="modal-close" onclick="closeModal('addModal')">×</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">이름 <span class="text-danger">*</span></label>
+            <input class="form-control" type="text" id="addName" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+            <label class="form-label">이메일</label>
+            <input class="form-control" type="email" id="addEmail" placeholder="student@example.com">
+        </div>
+        <div class="form-group">
+            <label class="form-label">연락처</label>
+            <input class="form-control" type="text" id="addPhone" placeholder="010-0000-0000">
+        </div>
+        <div id="addError" class="alert-error" style="display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('addModal')">취소</button>
+            <button class="btn btn-primary" onclick="addStudent()">등록</button>
+        </div>
+    </div>
+</div>
+
+<!-- 수강생 수정 모달 -->
+<div class="modal-overlay" id="editModal" onclick="closeModal('editModal', event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">수강생 수정</h2>
+            <button class="modal-close" onclick="closeModal('editModal')">×</button>
+        </div>
+        <input type="hidden" id="editStudentId">
+        <div class="form-group">
+            <label class="form-label">이름 <span class="text-danger">*</span></label>
+            <input class="form-control" type="text" id="editName">
+        </div>
+        <div class="form-group">
+            <label class="form-label">이메일</label>
+            <input class="form-control" type="email" id="editEmail">
+        </div>
+        <div class="form-group">
+            <label class="form-label">연락처</label>
+            <input class="form-control" type="text" id="editPhone">
+        </div>
+        <div id="editError" class="alert-error" style="display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('editModal')">취소</button>
+            <button class="btn btn-primary" onclick="updateStudent()">저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- 일괄 등록 모달 -->
+<div class="modal-overlay" id="bulkModal" onclick="closeModal('bulkModal', event)">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h2 class="modal-title">수강생 일괄 등록</h2>
+            <button class="modal-close" onclick="closeModal('bulkModal')">×</button>
+        </div>
+        <p class="text-muted" style="font-size:13px;margin-bottom:12px;">
+            한 줄에 한 명씩 입력하세요. 형식: <code>이름,이메일,연락처</code> (이메일·연락처 생략 가능)
+        </p>
+        <div class="form-group">
+            <textarea class="form-control" id="bulkText" rows="10"
+                      placeholder="홍길동,hong@example.com,010-1234-5678&#10;김철수,kim@example.com&#10;이영희"></textarea>
+        </div>
+        <div id="bulkError" class="alert-error" style="display:none;"></div>
+        <div id="bulkResult" style="display:none;padding:10px;background:#E8F5E9;border-radius:6px;font-size:13px;margin-bottom:12px;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('bulkModal')">닫기</button>
+            <button class="btn btn-primary" onclick="bulkCreate()">일괄 등록</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTrackId = null;
+
+    // ── 트랙 선택 & 목록 로드 ──────────────────────
+    async function loadStudents() {
+        const sel = document.getElementById('trackSelect');
+        currentTrackId = sel.value || null;
+        const btnAdd  = document.getElementById('btnAdd');
+        const btnBulk = document.getElementById('btnBulk');
+
+        if (!currentTrackId) {
+            btnAdd.disabled = true;
+            btnBulk.disabled = true;
+            document.getElementById('studentTableBody').innerHTML =
+                '<tr><td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">트랙을 선택하면 수강생 목록이 표시됩니다.</td></tr>';
+            return;
+        }
+
+        btnAdd.disabled = false;
+        btnBulk.disabled = false;
+
+        const res  = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students`);
+        const data = await res.json();
+        renderTable(data.data || []);
+    }
+
+    function renderTable(students) {
+        const tbody = document.getElementById('studentTableBody');
+        if (students.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">수강생이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = students.map(s => `
+            <tr>
+                <td style="font-weight:600;">${esc(s.name)}</td>
+                <td class="text-muted">${esc(s.email || '-')}</td>
+                <td class="text-muted">${esc(s.phone || '-')}</td>
+                <td>${riskBadge(s.riskLevel)}</td>
+                <td class="text-muted">${s.submittedAt ? s.submittedAt.substring(0, 16).replace('T', ' ') : '-'}</td>
+                <td style="text-align:center;">
+                    <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;"
+                            onclick="openEditModal(${s.studentId},'${esc(s.name)}','${esc(s.email||'')}','${esc(s.phone||'')}')">수정</button>
+                    <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;margin-left:4px;"
+                            onclick="deleteStudent(${s.studentId})">삭제</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function riskBadge(level) {
+        const map = {
+            '즉시면담': '<span class="badge badge-danger">즉시면담</span>',
+            '주의':    '<span class="badge badge-warning">주의</span>',
+            '관찰':    '<span class="badge badge-caution">관찰</span>',
+            '정상':    '<span class="badge badge-success">정상</span>',
+        };
+        return map[level] || '<span class="badge badge-none">미제출</span>';
+    }
+
+    function esc(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // ── 모달 공통 ──────────────────────────────────
+    function closeModal(id, e) {
+        if (e && e.target !== document.getElementById(id)) return;
+        document.getElementById(id).classList.remove('open');
+    }
+
+    // ── 수강생 등록 ────────────────────────────────
+    function openAddModal() {
+        ['addName','addEmail','addPhone'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('addError').style.display = 'none';
+        document.getElementById('addModal').classList.add('open');
+    }
+
+    async function addStudent() {
+        const name  = document.getElementById('addName').value.trim();
+        const email = document.getElementById('addEmail').value.trim();
+        const phone = document.getElementById('addPhone').value.trim();
+        const errEl = document.getElementById('addError');
+        errEl.style.display = 'none';
+
+        if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+        const res = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, email: email || null, phone: phone || null})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            closeModal('addModal');
+            loadStudents();
+        } else {
+            errEl.textContent = data.message || '등록에 실패했습니다.';
+            errEl.style.display = 'block';
+        }
+    }
+
+    // ── 수강생 수정 ────────────────────────────────
+    function openEditModal(id, name, email, phone) {
+        document.getElementById('editStudentId').value = id;
+        document.getElementById('editName').value  = name;
+        document.getElementById('editEmail').value = email;
+        document.getElementById('editPhone').value = phone;
+        document.getElementById('editError').style.display = 'none';
+        document.getElementById('editModal').classList.add('open');
+    }
+
+    async function updateStudent() {
+        const studentId = document.getElementById('editStudentId').value;
+        const name  = document.getElementById('editName').value.trim();
+        const email = document.getElementById('editEmail').value.trim();
+        const phone = document.getElementById('editPhone').value.trim();
+        const errEl = document.getElementById('editError');
+        errEl.style.display = 'none';
+
+        if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+        const res = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students/${studentId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, email: email || null, phone: phone || null})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            closeModal('editModal');
+            loadStudents();
+        } else {
+            errEl.textContent = data.message || '수정에 실패했습니다.';
+            errEl.style.display = 'block';
+        }
+    }
+
+    // ── 수강생 삭제 ────────────────────────────────
+    async function deleteStudent(studentId) {
+        if (!confirm('수강생을 삭제하시겠습니까? 관련 학습 진척도도 함께 삭제됩니다.')) return;
+        const res = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students/${studentId}`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) {
+            loadStudents();
+        } else {
+            alert(data.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    // ── 일괄 등록 ──────────────────────────────────
+    function openBulkModal() {
+        document.getElementById('bulkText').value = '';
+        document.getElementById('bulkError').style.display = 'none';
+        document.getElementById('bulkResult').style.display = 'none';
+        document.getElementById('bulkModal').classList.add('open');
+    }
+
+    async function bulkCreate() {
+        const text  = document.getElementById('bulkText').value.trim();
+        const errEl = document.getElementById('bulkResult');
+        const resEl = document.getElementById('bulkResult');
+        document.getElementById('bulkError').style.display = 'none';
+        resEl.style.display = 'none';
+
+        if (!text) {
+            document.getElementById('bulkError').textContent = '내용을 입력해주세요.';
+            document.getElementById('bulkError').style.display = 'block';
+            return;
+        }
+
+        const students = text.split('\n').map(line => {
+            const parts = line.split(',').map(p => p.trim());
+            return {name: parts[0] || '', email: parts[1] || null, phone: parts[2] || null};
+        }).filter(s => s.name);
+
+        if (students.length === 0) {
+            document.getElementById('bulkError').textContent = '유효한 데이터가 없습니다.';
+            document.getElementById('bulkError').style.display = 'block';
+            return;
+        }
+
+        const res  = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students/bulk`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({students})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            resEl.textContent = `등록 완료: 성공 ${data.data.successCount}명 / 실패 ${data.data.failCount}명`;
+            resEl.style.display = 'block';
+            loadStudents();
+        } else {
+            document.getElementById('bulkError').textContent = data.message || '등록에 실패했습니다.';
+            document.getElementById('bulkError').style.display = 'block';
+        }
+    }
+</script>
+</body>
+</html>

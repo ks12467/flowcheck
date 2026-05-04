@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('PM 관리')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <h1 class="page-title" style="margin-bottom:0">PM 관리</h1>
+            <button class="btn btn-primary" onclick="openInviteModal()">+ PM 초대</button>
+        </div>
+
+        <div class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>이메일</th>
+                            <th>담당 트랙</th>
+                            <th>트랙 배정</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(pmViews)}">
+                            <td colspan="4" style="text-align:center;color:#6C757D;padding:32px;">
+                                등록된 PM이 없습니다.
+                            </td>
+                        </tr>
+                        <tr th:each="pm : ${pmViews}">
+                            <td style="font-weight:600;" th:text="${pm.name}">이름</td>
+                            <td class="text-muted" th:text="${pm.email}">이메일</td>
+                            <td>
+                                <div class="track-tags" th:id="'tags-' + ${pm.pmId}">
+                                    <span th:each="t : ${pm.tracks}" class="track-tag">
+                                        <span th:text="${t.trackName}">트랙명</span>
+                                        <button class="tag-remove"
+                                                th:attr="onclick='removeTrack(' + ${pm.pmId} + ',' + ${t.trackId} + ')'">×</button>
+                                    </span>
+                                    <span th:if="${#lists.isEmpty(pm.tracks)}" class="text-muted" style="font-size:12px;">없음</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="flex gap-8">
+                                    <select class="form-control" style="width:180px;"
+                                            th:id="'track-select-' + ${pm.pmId}">
+                                        <option value="">트랙 선택</option>
+                                        <option th:each="t : ${allTracks}"
+                                                th:value="${t.id}"
+                                                th:text="${t.name}">트랙</option>
+                                    </select>
+                                    <button class="btn btn-primary"
+                                            th:attr="onclick='assignTrack(' + ${pm.pmId} + ')'">배정</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- PM 초대 모달 -->
+<div class="modal-overlay" id="inviteModal" onclick="closeInviteModal(event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">PM 초대</h2>
+            <button class="modal-close" onclick="closeInviteModal()">×</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">이름 <span class="text-danger">*</span></label>
+            <input class="form-control" type="text" id="inviteName" placeholder="홍길동">
+        </div>
+        <div class="form-group">
+            <label class="form-label">이메일 <span class="text-danger">*</span></label>
+            <input class="form-control" type="email" id="inviteEmail" placeholder="pm@example.com">
+        </div>
+        <div id="inviteError" class="alert-error" style="display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeInviteModal()">취소</button>
+            <button class="btn btn-primary" onclick="invitePm()">초대</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── 모달 ───────────────────────────────────────
+    function openInviteModal() {
+        document.getElementById('inviteName').value = '';
+        document.getElementById('inviteEmail').value = '';
+        document.getElementById('inviteError').style.display = 'none';
+        document.getElementById('inviteModal').classList.add('open');
+    }
+    function closeInviteModal(e) {
+        if (e && e.target !== document.getElementById('inviteModal')) return;
+        document.getElementById('inviteModal').classList.remove('open');
+    }
+
+    // ── PM 초대 ────────────────────────────────────
+    async function invitePm() {
+        const name  = document.getElementById('inviteName').value.trim();
+        const email = document.getElementById('inviteEmail').value.trim();
+        const errEl = document.getElementById('inviteError');
+        errEl.style.display = 'none';
+
+        if (!name || !email) {
+            errEl.textContent = '이름과 이메일을 입력해주세요.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        const res = await fetch('/api/v1/auth/invite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, email})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'PM이 초대되었습니다.');
+            location.reload();
+        } else {
+            errEl.textContent = data.message || '오류가 발생했습니다.';
+            errEl.style.display = 'block';
+        }
+    }
+
+    // ── 트랙 배정 ──────────────────────────────────
+    async function assignTrack(pmId) {
+        const sel = document.getElementById('track-select-' + pmId);
+        const trackId = sel.value;
+        if (!trackId) { alert('트랙을 선택해주세요.'); return; }
+
+        const res = await fetch(`/api/v1/admin/pms/${pmId}/tracks/${trackId}`, {method: 'POST'});
+        const data = await res.json();
+        if (res.ok) {
+            location.reload();
+        } else {
+            alert(data.message || '배정에 실패했습니다.');
+        }
+    }
+
+    // ── 트랙 해제 ──────────────────────────────────
+    async function removeTrack(pmId, trackId) {
+        if (!confirm('트랙 배정을 해제하시겠습니까?')) return;
+        const res = await fetch(`/api/v1/admin/pms/${pmId}/tracks/${trackId}`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) {
+            location.reload();
+        } else {
+            alert(data.message || '해제에 실패했습니다.');
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${track.name} + ' - 학습 진척도 제출'">학습 진척도 제출</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="form-page">
+
+    <!-- 폼 헤더 -->
+    <div class="form-header">
+        <h1 th:text="${track.name} + ' 학습 진척도'">학습 진척도</h1>
+        <p>오늘 학습 현황을 솔직하게 작성해주세요.</p>
+    </div>
+
+    <!-- 이름 -->
+    <div class="form-card">
+        <div class="form-group" style="margin:0">
+            <label class="form-label">이름 <span style="color:#DC3545">*</span></label>
+            <input id="studentName" class="form-control" type="text" placeholder="본인 이름을 입력하세요">
+        </div>
+    </div>
+
+    <!-- 강의 / 주차 / 강 선택 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <div class="form-group">
+            <label class="form-label">강의 선택 <span style="color:#DC3545">*</span></label>
+            <select id="courseSelect" class="form-control">
+                <option value="">강의를 선택하세요</option>
+                <option th:each="c : ${courses}"
+                        th:value="${c.id}"
+                        th:text="${c.name}"
+                        th:attr="data-weeks=${#strings.toString(c.weeks)}">강의명</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">주차 선택 <span style="color:#DC3545">*</span></label>
+            <select id="weekSelect" class="form-control" disabled>
+                <option value="">강의를 먼저 선택하세요</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0">
+            <label class="form-label">강 번호</label>
+            <input id="lectureNumber" class="form-control" type="number" min="1" placeholder="수강한 강 번호 (선택)">
+        </div>
+    </div>
+
+    <!-- 수강 상태 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <label class="form-label">수강 상태</label>
+        <select id="statusSelect" class="form-control">
+            <option value="">선택하세요</option>
+            <option value="수강중">수강중</option>
+            <option value="수강예정">수강예정</option>
+            <option value="수강완료">수강완료</option>
+        </select>
+    </div>
+
+    <!-- 과제 진척도 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <label class="form-label">과제 진척도</label>
+        <div class="range-wrap">
+            <input id="assignmentRange" type="range" min="0" max="100" value="0" step="5"
+                   oninput="document.getElementById('assignmentVal').textContent = this.value + '%'">
+            <span id="assignmentVal" style="font-weight:700;min-width:40px;color:#1F4E79;">0%</span>
+        </div>
+    </div>
+
+    <!-- TIL 작성 여부 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <label class="form-label">TIL 작성 여부</label>
+        <div class="toggle-wrap">
+            <input id="tilCheckbox" class="toggle" type="checkbox">
+            <label for="tilCheckbox" style="font-size:14px;">오늘 TIL을 작성했어요</label>
+        </div>
+    </div>
+
+    <!-- 학습 난이도 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <label class="form-label">오늘 학습 난이도 <span style="color:#DC3545">*</span></label>
+        <p class="text-muted" style="font-size:12px;margin-bottom:12px;">1 = 매우 쉬움 &nbsp;|&nbsp; 5 = 매우 어려움</p>
+        <div class="score-buttons">
+            <button type="button" class="score-btn" data-score="1">😊 1</button>
+            <button type="button" class="score-btn" data-score="2">🙂 2</button>
+            <button type="button" class="score-btn" data-score="3">😐 3</button>
+            <button type="button" class="score-btn" data-score="4">😟 4</button>
+            <button type="button" class="score-btn" data-score="5">😭 5</button>
+        </div>
+    </div>
+
+    <!-- 코멘트 -->
+    <div class="form-card" style="border-radius:12px;margin-top:12px;">
+        <label class="form-label">코멘트</label>
+        <textarea id="comment" class="form-control" rows="4"
+                  placeholder="어려웠던 점이나 하고 싶은 말을 자유롭게 작성해주세요."></textarea>
+    </div>
+
+    <!-- 제출 버튼 -->
+    <button id="submitBtn" class="form-submit-btn" type="button">제출하기</button>
+
+    <!-- 결과 카드 -->
+    <div class="result-card" id="resultCard">
+        <div class="result-percent" id="resultPercent">0%</div>
+        <div class="result-text" id="resultText">지금 나와 비슷한 학습 상황인 수강생이에요.</div>
+        <div class="mt-16" style="font-size:13px;color:#6C757D;">제출이 완료되었습니다. 오늘도 수고했어요!</div>
+    </div>
+
+</div>
+
+<!-- 강의 데이터를 JSON으로 전달 -->
+<script th:inline="javascript">
+    const coursesData = /*[[${courses}]]*/ [];
+</script>
+<script th:src="@{/js/progress-form.js}"></script>
+</body>
+</html>

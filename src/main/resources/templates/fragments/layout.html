@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!-- HEAD 프래그먼트 -->
+<head th:fragment="head(pageTitle)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} + ' - FlowCheck'">FlowCheck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<!-- 사이드바 프래그먼트 -->
+<nav class="sidebar" th:fragment="sidebar">
+    <div class="sidebar-logo">
+        FlowCheck
+        <span>학습 진척도 관리</span>
+    </div>
+    <ul class="sidebar-menu">
+        <li>
+            <a th:href="@{/dashboard}" class="sidebar-item">📊 대시보드</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/tracks}" class="sidebar-item">🗂️ 트랙 관리</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/pms}" class="sidebar-item">👥 PM 관리</a>
+        </li>
+        <li>
+            <a th:href="@{/admin/students}" class="sidebar-item">🎓 수강생 관리</a>
+        </li>
+        <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
+            <li><div class="sidebar-section">내 트랙</div></li>
+            <li th:each="t : ${sidebarTracks}">
+                <a th:href="@{/tracks/{id}/students(id=${t.id})}"
+                   class="sidebar-item"
+                   th:text="${t.name}">트랙명</a>
+            </li>
+        </th:block>
+    </ul>
+    <div class="sidebar-footer">
+        <div class="pm-name" th:if="${pm != null}" th:text="${pm.name} + ' PM'">이름 PM</div>
+        <a th:href="@{/logout}" class="btn-logout" style="display:block;text-align:center;">로그아웃</a>
+    </div>
+</nav>
+
+</html>

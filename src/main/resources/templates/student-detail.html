@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('수강생 상세')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <!-- 헤더 -->
+        <div class="flex-between mb-16">
+            <div class="flex gap-8">
+                <a th:href="@{/tracks/{id}/students(id=${track.id})}"
+                   class="btn btn-outline" style="font-size:13px;">← 목록으로</a>
+                <div>
+                    <h1 class="page-title" style="margin-bottom:0" th:text="${student.name}">수강생 이름</h1>
+                    <div class="page-subtitle" th:text="${track.name}">트랙명</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- 기본 정보 -->
+            <div class="card">
+                <div class="card-title">수강생 정보</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>이름</label>
+                        <span th:text="${student.name}">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>이메일</label>
+                        <span th:text="${student.email ?: '-'}">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>연락처</label>
+                        <span th:text="${student.phone ?: '-'}">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>위험군</label>
+                        <span th:if="${latest != null}">
+                            <span th:if="${latest.riskLevel == '즉시면담'}" class="badge badge-danger">즉시면담</span>
+                            <span th:if="${latest.riskLevel == '주의'}"    class="badge badge-warning">주의</span>
+                            <span th:if="${latest.riskLevel == '관찰'}"    class="badge badge-caution">관찰</span>
+                            <span th:if="${latest.riskLevel == '정상'}"    class="badge badge-success">정상</span>
+                        </span>
+                        <span th:if="${latest == null}" class="badge badge-none">미제출</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 최근 진척도 -->
+            <div class="card" th:if="${latest != null}">
+                <div class="card-title">최근 학습 진척도</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>난이도</label>
+                        <span class="stars" th:text="${'★'.repeat(latest.conditionScore) + '☆'.repeat(5 - latest.conditionScore)}">★★★☆☆</span>
+                        <span th:text="'(' + ${latest.conditionScore} + '점)'"> </span>
+                    </div>
+                    <div class="info-item">
+                        <label>과제 진척도</label>
+                        <span th:text="${latest.assignmentProgress != null ? latest.assignmentProgress + '%' : '-'}">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>TIL 작성</label>
+                        <span th:text="${latest.tilWritten != null ? (latest.tilWritten ? '✅ 작성' : '❌ 미작성') : '-'}">-</span>
+                    </div>
+                    <div class="info-item">
+                        <label>제출일</label>
+                        <span th:text="${latest.submittedAt != null ? #temporals.format(latest.submittedAt, 'yyyy/MM/dd HH:mm') : '-'}">-</span>
+                    </div>
+                </div>
+                <div th:if="${latest.comment != null and !#strings.isEmpty(latest.comment)}"
+                     class="mt-16" style="background:#F8F9FA;border-radius:6px;padding:12px 14px;">
+                    <div style="font-size:11px;color:#6C757D;margin-bottom:4px;">코멘트</div>
+                    <div style="font-size:13.5px;" th:text="${latest.comment}">코멘트 내용</div>
+                </div>
+            </div>
+            <div class="card" th:if="${latest == null}">
+                <div class="card-title">최근 학습 진척도</div>
+                <p class="text-muted" style="font-size:13px;">아직 제출된 진척도가 없습니다.</p>
+            </div>
+        </div>
+
+        <!-- 진척도 히스토리 -->
+        <div class="card">
+            <div class="card-title">📚 학습 진척도 히스토리</div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>제출일</th>
+                            <th>강의</th>
+                            <th>주차</th>
+                            <th>강</th>
+                            <th>상태</th>
+                            <th>난이도</th>
+                            <th>과제</th>
+                            <th>TIL</th>
+                            <th>위험군</th>
+                            <th>코멘트</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(progressHistory)}">
+                            <td colspan="10" style="text-align:center;color:#6C757D;padding:24px;">
+                                진척도 기록이 없습니다.
+                            </td>
+                        </tr>
+                        <tr th:each="lp : ${progressHistory}">
+                            <td class="text-muted" th:text="${#temporals.format(lp.submittedAt,'MM/dd HH:mm')}">날짜</td>
+                            <td th:text="${lp.courseWeek.course.name}">강의명</td>
+                            <td th:text="${lp.courseWeek.weekNumber} + '주차'">주차</td>
+                            <td th:text="${lp.lectureNumber != null ? lp.lectureNumber + '강' : '-'}">강</td>
+                            <td class="text-muted" th:text="${lp.status ?: '-'}">상태</td>
+                            <td style="font-weight:600;" th:text="${lp.conditionScore != null ? lp.conditionScore + '점' : '-'}">점수</td>
+                            <td th:text="${lp.assignmentProgress != null ? lp.assignmentProgress + '%' : '-'}">%</td>
+                            <td th:text="${lp.tilWritten != null ? (lp.tilWritten ? 'O' : 'X') : '-'}">-</td>
+                            <td>
+                                <span th:if="${lp.riskLevel == '즉시면담'}" class="badge badge-danger">즉시면담</span>
+                                <span th:if="${lp.riskLevel == '주의'}"    class="badge badge-warning">주의</span>
+                                <span th:if="${lp.riskLevel == '관찰'}"    class="badge badge-caution">관찰</span>
+                                <span th:if="${lp.riskLevel == '정상'}"    class="badge badge-success">정상</span>
+                                <span th:if="${lp.riskLevel == null}"      class="text-muted">-</span>
+                            </td>
+                            <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                th:text="${lp.comment ?: '-'}">코멘트</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

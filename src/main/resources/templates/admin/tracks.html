@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('트랙 관리')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <h1 class="page-title" style="margin-bottom:0">트랙 관리</h1>
+            <button sec:authorize="hasRole('ADMIN')"
+                    class="btn btn-primary" onclick="openCreateModal()">+ 트랙 생성</button>
+        </div>
+
+        <div class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>트랙명</th>
+                            <th>과정 분류</th>
+                            <th>기수</th>
+                            <th>시작일</th>
+                            <th>종료일</th>
+                            <th>수강생 수</th>
+                            <th style="width:120px;text-align:center;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackTableBody">
+                        <tr th:if="${#lists.isEmpty(allTracks)}">
+                            <td colspan="7" style="text-align:center;color:#6C757D;padding:32px;">
+                                등록된 트랙이 없습니다.
+                            </td>
+                        </tr>
+                        <tr th:each="t : ${allTracks}" th:id="'row-' + ${t.id}">
+                            <td style="font-weight:600;" th:text="${t.name}">트랙명</td>
+                            <td class="text-muted" th:text="${t.courseType ?: '-'}">과정</td>
+                            <td th:text="${t.generation != null ? t.generation + '기' : '-'}">기수</td>
+                            <td class="text-muted"
+                                th:text="${t.startDate != null ? #temporals.format(t.startDate, 'yyyy.MM.dd') : '-'}">시작일</td>
+                            <td class="text-muted"
+                                th:text="${t.endDate != null ? #temporals.format(t.endDate, 'yyyy.MM.dd') : '-'}">종료일</td>
+                            <td>
+                                <span class="badge badge-none" th:id="'count-' + ${t.id}">-</span>
+                            </td>
+                            <td style="text-align:center;">
+                                <button sec:authorize="hasRole('ADMIN')"
+                                        class="btn btn-outline" style="padding:4px 10px;font-size:12px;"
+                                        th:attr="onclick='openEditModal(' + ${t.id} + ',\'' + ${t.courseType} + '\',' + ${t.generation} + ',\'' + ${t.startDate} + '\',\'' + ${t.endDate} + '\')'">수정</button>
+                                <button sec:authorize="hasRole('ADMIN')"
+                                        class="btn btn-danger" style="padding:4px 10px;font-size:12px;margin-left:4px;"
+                                        th:attr="onclick='deleteTrack(' + ${t.id} + ')'">삭제</button>
+                                <span sec:authorize="!hasRole('ADMIN')" class="text-muted" style="font-size:12px;">-</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 트랙 생성 모달 -->
+<div class="modal-overlay" id="createModal" onclick="closeModal('createModal', event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">트랙 생성</h2>
+            <button class="modal-close" onclick="closeModal('createModal')">×</button>
+        </div>
+
+        <!-- 트랙명 미리보기 -->
+        <div style="background:#F0F4F8;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+            <div style="font-size:11px;color:#6C757D;margin-bottom:4px;">생성될 트랙명</div>
+            <div id="createPreview" style="font-size:16px;font-weight:700;color:#1F4E79;">과정 선택 후 표시됩니다</div>
+        </div>
+
+        <!-- 과정 분류 -->
+        <div class="form-group">
+            <label class="form-label">과정 분류 <span class="text-danger">*</span></label>
+            <div class="course-group-label">개발자 과정</div>
+            <div class="course-options">
+                <label th:each="c : ${ {'이노베이션캠프','백엔드(Spring)','앱 제작(Flutter)','백엔드(단기Java)','백엔드(Kotlin)','iOS','AI 이노베이션캠프','Unreal','Unity'} }"
+                       class="course-option">
+                    <input type="radio" name="createCourseType" th:value="${c}" onchange="updatePreview('create')">
+                    <span th:text="${c}">과정명</span>
+                </label>
+            </div>
+            <div class="course-group-label" style="margin-top:12px;">비개발자 과정</div>
+            <div class="course-options">
+                <label th:each="c : ${ {'AI 디자이너','디지털 마케터','PM','UX/UI','QA/QC','데이터'} }"
+                       class="course-option">
+                    <input type="radio" name="createCourseType" th:value="${c}" onchange="updatePreview('create')">
+                    <span th:text="${c}">과정명</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 기수 -->
+        <div class="form-group">
+            <label class="form-label">기수 <span class="text-danger">*</span></label>
+            <div class="flex gap-8" style="align-items:center;">
+                <input class="form-control" type="number" id="createGeneration" min="1"
+                       placeholder="예: 7" style="max-width:120px;" oninput="updatePreview('create')">
+                <span style="font-size:14px;color:#6C757D;">기</span>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label class="form-label">시작일</label>
+                <input class="form-control" type="date" id="createStartDate">
+            </div>
+            <div class="form-group">
+                <label class="form-label">종료일</label>
+                <input class="form-control" type="date" id="createEndDate">
+            </div>
+        </div>
+
+        <div id="createError" class="alert-error" style="display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('createModal')">취소</button>
+            <button class="btn btn-primary" onclick="createTrack()">생성</button>
+        </div>
+    </div>
+</div>
+
+<!-- 트랙 수정 모달 -->
+<div class="modal-overlay" id="editModal" onclick="closeModal('editModal', event)">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">트랙 수정</h2>
+            <button class="modal-close" onclick="closeModal('editModal')">×</button>
+        </div>
+
+        <input type="hidden" id="editTrackId">
+
+        <!-- 트랙명 미리보기 -->
+        <div style="background:#F0F4F8;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
+            <div style="font-size:11px;color:#6C757D;margin-bottom:4px;">수정될 트랙명</div>
+            <div id="editPreview" style="font-size:16px;font-weight:700;color:#1F4E79;">-</div>
+        </div>
+
+        <!-- 과정 분류 -->
+        <div class="form-group">
+            <label class="form-label">과정 분류 <span class="text-danger">*</span></label>
+            <div class="course-group-label">개발자 과정</div>
+            <div class="course-options">
+                <label th:each="c : ${ {'이노베이션캠프','백엔드(Spring)','앱 제작(Flutter)','백엔드(단기Java)','백엔드(Kotlin)','iOS','AI 이노베이션캠프','Unreal','Unity'} }"
+                       class="course-option">
+                    <input type="radio" name="editCourseType" th:value="${c}" onchange="updatePreview('edit')">
+                    <span th:text="${c}">과정명</span>
+                </label>
+            </div>
+            <div class="course-group-label" style="margin-top:12px;">비개발자 과정</div>
+            <div class="course-options">
+                <label th:each="c : ${ {'AI 디자이너','디지털 마케터','PM','UX/UI','QA/QC','데이터'} }"
+                       class="course-option">
+                    <input type="radio" name="editCourseType" th:value="${c}" onchange="updatePreview('edit')">
+                    <span th:text="${c}">과정명</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 기수 -->
+        <div class="form-group">
+            <label class="form-label">기수 <span class="text-danger">*</span></label>
+            <div class="flex gap-8" style="align-items:center;">
+                <input class="form-control" type="number" id="editGeneration" min="1"
+                       style="max-width:120px;" oninput="updatePreview('edit')">
+                <span style="font-size:14px;color:#6C757D;">기</span>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label class="form-label">시작일</label>
+                <input class="form-control" type="date" id="editStartDate">
+            </div>
+            <div class="form-group">
+                <label class="form-label">종료일</label>
+                <input class="form-control" type="date" id="editEndDate">
+            </div>
+        </div>
+
+        <div id="editError" class="alert-error" style="display:none;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('editModal')">취소</button>
+            <button class="btn btn-primary" onclick="updateTrack()">저장</button>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    // ── 수강생 수 비동기 로드 ───────────────────────
+    (async () => {
+        const res  = await fetch('/api/v1/admin/tracks');
+        const data = await res.json();
+        if (!res.ok) return;
+        (data.data || []).forEach(t => {
+            const el = document.getElementById('count-' + t.trackId);
+            if (el) el.textContent = t.studentCount + '명';
+        });
+    })();
+
+    // ── 트랙명 미리보기 ────────────────────────────
+    function updatePreview(prefix) {
+        const courseType = document.querySelector(`input[name="${prefix}CourseType"]:checked`)?.value || '';
+        const generation = document.getElementById(prefix + 'Generation').value;
+        const preview    = document.getElementById(prefix + 'Preview');
+        preview.textContent = courseType && generation
+            ? `${courseType} ${generation}기`
+            : '과정과 기수를 선택해주세요';
+    }
+
+    // ── 모달 ───────────────────────────────────────
+    function openCreateModal() {
+        document.querySelectorAll('input[name="createCourseType"]').forEach(r => r.checked = false);
+        document.getElementById('createGeneration').value  = '';
+        document.getElementById('createStartDate').value   = '';
+        document.getElementById('createEndDate').value     = '';
+        document.getElementById('createPreview').textContent = '과정 선택 후 표시됩니다';
+        document.getElementById('createError').style.display = 'none';
+        document.getElementById('createModal').classList.add('open');
+    }
+
+    function openEditModal(trackId, courseType, generation, startDate, endDate) {
+        document.getElementById('editTrackId').value = trackId;
+        document.getElementById('editGeneration').value = generation !== 'null' ? generation : '';
+        document.getElementById('editStartDate').value  = startDate !== 'null' ? startDate : '';
+        document.getElementById('editEndDate').value    = endDate   !== 'null' ? endDate   : '';
+        document.getElementById('editError').style.display = 'none';
+
+        // 라디오 선택
+        document.querySelectorAll('input[name="editCourseType"]').forEach(r => {
+            r.checked = r.value === courseType;
+        });
+        updatePreview('edit');
+        document.getElementById('editModal').classList.add('open');
+    }
+
+    function closeModal(id, e) {
+        if (e && e.target !== document.getElementById(id)) return;
+        document.getElementById(id).classList.remove('open');
+    }
+
+    // ── 트랙 생성 ──────────────────────────────────
+    async function createTrack() {
+        const courseType = document.querySelector('input[name="createCourseType"]:checked')?.value;
+        const generation = parseInt(document.getElementById('createGeneration').value);
+        const startDate  = document.getElementById('createStartDate').value || null;
+        const endDate    = document.getElementById('createEndDate').value   || null;
+        const errEl      = document.getElementById('createError');
+        errEl.style.display = 'none';
+
+        if (!courseType) { errEl.textContent = '과정 분류를 선택해주세요.'; errEl.style.display = 'block'; return; }
+        if (!generation) { errEl.textContent = '기수를 입력해주세요.';     errEl.style.display = 'block'; return; }
+
+        const res  = await fetch('/api/v1/admin/tracks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({courseType, generation, startDate, endDate})
+        });
+        const data = await res.json();
+        if (res.ok) { location.reload(); }
+        else { errEl.textContent = data.message || '생성에 실패했습니다.'; errEl.style.display = 'block'; }
+    }
+
+    // ── 트랙 수정 ──────────────────────────────────
+    async function updateTrack() {
+        const trackId    = document.getElementById('editTrackId').value;
+        const courseType = document.querySelector('input[name="editCourseType"]:checked')?.value;
+        const generation = parseInt(document.getElementById('editGeneration').value);
+        const startDate  = document.getElementById('editStartDate').value || null;
+        const endDate    = document.getElementById('editEndDate').value   || null;
+        const errEl      = document.getElementById('editError');
+        errEl.style.display = 'none';
+
+        if (!courseType) { errEl.textContent = '과정 분류를 선택해주세요.'; errEl.style.display = 'block'; return; }
+        if (!generation) { errEl.textContent = '기수를 입력해주세요.';     errEl.style.display = 'block'; return; }
+
+        const res  = await fetch(`/api/v1/admin/tracks/${trackId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({courseType, generation, startDate, endDate})
+        });
+        const data = await res.json();
+        if (res.ok) { location.reload(); }
+        else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
+    }
+
+    // ── 트랙 삭제 ──────────────────────────────────
+    async function deleteTrack(trackId) {
+        if (!confirm('트랙을 삭제하시겠습니까?\n트랙에 속한 수강생과 학습 진척도도 함께 삭제됩니다.')) return;
+        const res  = await fetch(`/api/v1/admin/tracks/${trackId}`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) { location.reload(); }
+        else { alert(data.message || '삭제에 실패했습니다.'); }
+    }
+</script>
+</body>
+</html>

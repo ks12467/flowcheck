@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('수강생 목록')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <div>
+                <h1 class="page-title" style="margin-bottom:0" th:text="${track.name}">트랙명</h1>
+                <div class="page-subtitle">수강생 목록</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <!-- 검색 -->
+            <form method="get" th:action="@{/tracks/{id}/students(id=${track.id})}" class="search-bar">
+                <input type="hidden" name="riskLevel" th:value="${selectedRiskLevel}">
+                <input class="form-control" type="text" name="keyword"
+                       placeholder="이름 또는 이메일 검색"
+                       th:value="${keyword}">
+                <button class="btn btn-primary" type="submit">검색</button>
+                <a th:href="@{/tracks/{id}/students(id=${track.id})}" class="btn btn-outline">초기화</a>
+            </form>
+
+            <!-- 위험군 필터 -->
+            <div class="filter-group">
+                <a th:href="@{/tracks/{id}/students(id=${track.id}, keyword=${keyword})}"
+                   class="btn btn-outline" th:classappend="${selectedRiskLevel == null} ? 'active' : ''">전체</a>
+                <a th:href="@{/tracks/{id}/students(id=${track.id}, riskLevel='즉시면담', keyword=${keyword})}"
+                   class="btn btn-outline" th:classappend="${selectedRiskLevel == '즉시면담'} ? 'active' : ''"
+                   style="color:#DC3545; border-color:#DC3545;">🚨 즉시면담</a>
+                <a th:href="@{/tracks/{id}/students(id=${track.id}, riskLevel='주의', keyword=${keyword})}"
+                   class="btn btn-outline" th:classappend="${selectedRiskLevel == '주의'} ? 'active' : ''"
+                   style="color:#FD7E14; border-color:#FD7E14;">⚠️ 주의</a>
+                <a th:href="@{/tracks/{id}/students(id=${track.id}, riskLevel='관찰', keyword=${keyword})}"
+                   class="btn btn-outline" th:classappend="${selectedRiskLevel == '관찰'} ? 'active' : ''"
+                   style="color:#B8860B; border-color:#FFC107;">👀 관찰</a>
+                <a th:href="@{/tracks/{id}/students(id=${track.id}, riskLevel='정상', keyword=${keyword})}"
+                   class="btn btn-outline" th:classappend="${selectedRiskLevel == '정상'} ? 'active' : ''"
+                   style="color:#28A745; border-color:#28A745;">✅ 정상</a>
+            </div>
+
+            <!-- 수강생 테이블 -->
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>이메일</th>
+                            <th>연락처</th>
+                            <th>위험군</th>
+                            <th>최근 난이도</th>
+                            <th>최근 제출일</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(students)}">
+                            <td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">
+                                수강생이 없습니다.
+                            </td>
+                        </tr>
+                        <tr th:each="s : ${students}"
+                            class="clickable"
+                            th:onclick="|location.href='/tracks/${track.id}/students/${s.studentId}'|">
+                            <td style="font-weight:600;" th:text="${s.name}">이름</td>
+                            <td class="text-muted" th:text="${s.email ?: '-'}">이메일</td>
+                            <td class="text-muted" th:text="${s.phone ?: '-'}">연락처</td>
+                            <td>
+                                <span th:if="${s.riskLevel == '즉시면담'}" class="badge badge-danger">즉시면담</span>
+                                <span th:if="${s.riskLevel == '주의'}"    class="badge badge-warning">주의</span>
+                                <span th:if="${s.riskLevel == '관찰'}"    class="badge badge-caution">관찰</span>
+                                <span th:if="${s.riskLevel == '정상'}"    class="badge badge-success">정상</span>
+                                <span th:if="${s.riskLevel == null}"      class="badge badge-none">미제출</span>
+                            </td>
+                            <td>
+                                <span th:if="${s.conditionScore != null}"
+                                      th:text="${s.conditionScore} + '점'">점수</span>
+                                <span th:if="${s.conditionScore == null}" class="text-muted">-</span>
+                            </td>
+                            <td class="text-muted">
+                                <span th:if="${s.submittedAt != null}"
+                                      th:text="${#temporals.format(s.submittedAt, 'MM/dd HH:mm')}">날짜</span>
+                                <span th:if="${s.submittedAt == null}">-</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

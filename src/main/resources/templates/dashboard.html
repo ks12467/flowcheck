@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('대시보드')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <div>
+                <h1 class="page-title" style="margin-bottom:0">대시보드</h1>
+                <div class="page-subtitle" th:text="'오늘도 수강생들의 학습을 응원해요, ' + ${pm?.name} + ' PM'"></div>
+            </div>
+        </div>
+
+        <!-- 즉시면담 수강생 -->
+        <div class="card">
+            <div class="card-title" style="color:#DC3545;">🚨 즉시면담 필요 수강생</div>
+            <div class="urgent-cards" th:if="${!#lists.isEmpty(urgentStudents)}">
+                <div class="urgent-card"
+                     th:each="lp : ${urgentStudents}"
+                     th:onclick="|location.href='/tracks/${lp.student.track.id}/students/${lp.student.id}'|">
+                    <div class="urgent-card-name" th:text="${lp.student.name}">이름</div>
+                    <div class="urgent-card-track" th:text="${lp.student.track.name}">트랙명</div>
+                    <div class="mt-4" style="font-size:12px;color:#DC3545;"
+                         th:text="'난이도 ' + ${lp.conditionScore} + '점'">난이도</div>
+                </div>
+            </div>
+            <div class="urgent-empty" th:if="${#lists.isEmpty(urgentStudents)}">
+                즉시면담이 필요한 수강생이 없습니다.
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- 트랙별 오늘 제출 현황 -->
+            <div class="card">
+                <div class="card-title">📋 트랙별 오늘 제출 현황</div>
+                <div th:if="${#lists.isEmpty(trackStats)}" class="text-muted" style="font-size:13px;">
+                    배정된 트랙이 없습니다.
+                </div>
+                <div th:each="stat : ${trackStats}" class="progress-bar-wrap">
+                    <div class="progress-bar-label">
+                        <span th:text="${stat.trackName}">트랙</span>
+                        <span style="color:#6C757D;"
+                              th:text="${stat.todayCount} + ' / ' + ${stat.totalStudents} + '명'">0 / 0명</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill"
+                             th:style="${stat.totalStudents > 0}
+                                ? 'width:' + (${stat.todayCount} * 100 / ${stat.totalStudents}) + '%'
+                                : 'width:0%'"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 난이도 분포 차트 -->
+            <div class="card">
+                <div class="card-title">📈 수강생 난이도 분포</div>
+                <canvas id="conditionChart" height="180"></canvas>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const counts = /*[[${conditionCounts}]]*/ [0,0,0,0,0];
+    const ctx = document.getElementById('conditionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['1점 (쉬움)', '2점', '3점 (보통)', '4점', '5점 (어려움)'],
+            datasets: [{
+                label: '수강생 수',
+                data: counts,
+                backgroundColor: ['#28A745','#8BC34A','#FFC107','#FD7E14','#DC3545'],
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+</script>
+</body>
+</html>
