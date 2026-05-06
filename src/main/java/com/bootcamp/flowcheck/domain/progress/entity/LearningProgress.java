@@ -51,6 +51,9 @@ public class LearningProgress {
     @Column(name = "submitted_at", updatable = false)
     private LocalDateTime submittedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public LearningProgress(Student student, CourseWeek courseWeek, Integer lectureNumber,
                             String status, Integer assignmentProgress, Boolean tilWritten,

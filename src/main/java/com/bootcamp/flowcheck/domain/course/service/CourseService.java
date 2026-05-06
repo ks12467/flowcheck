@@ -109,7 +109,14 @@ public class CourseService {
         Course course = courseRepository.findByIdAndTrack_Id(courseId, trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
 
-        courseRepository.delete(course);
+        course.softDelete();
+    }
+
+    @Transactional
+    public void permanentDeleteCourse(Long courseId) {
+        courseRepository.findDeletedById(courseId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND));
+        courseRepository.permanentDeleteById(courseId);
     }
 
     @Transactional

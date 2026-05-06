@@ -37,9 +37,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
-        log.error("[UnhandledException] {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
+        Throwable root = getRootCause(e);
+        log.error("[UnhandledException] type={}, message={}, rootCause={}: {}",
+                e.getClass().getSimpleName(), e.getMessage(),
+                root.getClass().getSimpleName(), root.getMessage(), e);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail(ErrorCode.INTERNAL_ERROR.getMessage()));
+    }
+
+    private Throwable getRootCause(Throwable t) {
+        Throwable cause = t.getCause();
+        return (cause == null || cause == t) ? t : getRootCause(cause);
     }
 }

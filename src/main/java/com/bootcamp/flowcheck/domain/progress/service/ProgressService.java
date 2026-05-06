@@ -85,8 +85,32 @@ public class ProgressService {
                 .build();
         progressRepository.save(progress);
 
-        int similarPercent = calculateSimilarStudentPercent(trackId, request.getConditionScore());
-        return new LearningProgressSubmitResponse(similarPercent);
+        int myScore = request.getConditionScore();
+        Map<Integer, Long> scoreMap = fetchRecentScoreMap(trackId, myScore);
+
+        long total = scoreMap.values().stream().mapToLong(Long::longValue).sum();
+        int similarPercent = total == 0 ? 0
+                : (int) Math.round(scoreMap.getOrDefault(myScore, 0L) * 100.0 / total);
+
+        List<LearningProgressSubmitResponse.CaseStats> sorted = scoreMap.entrySet().stream()
+                .sorted(Map.Entry.<Integer, Long>comparingByValue().reversed())
+                .map(e -> buildCaseStats(e.getKey(), e.getValue()))
+                .toList();
+
+        List<LearningProgressSubmitResponse.CaseStats> topCases = new ArrayList<>(
+                sorted.stream().limit(2).toList());
+        boolean myIncluded = topCases.stream().anyMatch(c -> c.getConditionScore() == myScore);
+        if (!myIncluded) {
+            sorted.stream().filter(c -> c.getConditionScore() == myScore).findFirst().ifPresent(topCases::add);
+        } else if (sorted.size() > 2) {
+            topCases.add(sorted.get(2));
+        }
+
+        LearningProgressSubmitResponse.CaseStats myCase =
+                topCases.stream().filter(c -> c.getConditionScore() == myScore)
+                        .findFirst().orElse(buildCaseStats(myScore, 1L));
+
+        return new LearningProgressSubmitResponse(similarPercent, topCases, myCase);
     }
 
     // ── PM 인증 API ───────────────────────────────────────────────────────────
@@ -163,22 +187,34 @@ public class ProgressService {
         return false;
     }
 
-    // ── 유사 수강생 비율 ──────────────────────────────────────────────────────
+    // ── 유사 수강생 비율 + 난이도 케이스 통계 ────────────────────────────────
 
-    private int calculateSimilarStudentPercent(Long trackId, Integer conditionScore) {
-        List<Student> trackStudents = studentRepository.findAllByTrack_Id(trackId);
-        if (trackStudents.isEmpty()) return 0;
+    private static final Map<Integer, String> SCORE_LABELS = Map.of(
+            1, "매우 쉬움", 2, "쉬움", 3, "보통", 4, "어려움", 5, "매우 어려움"
+    );
 
-        List<Long> studentIds = trackStudents.stream().map(Student::getId).toList();
-        List<LearningProgress> latestProgressList = progressRepository.findLatestByStudentIds(studentIds);
+    /**
+     * 최근 3일 내 수강생별 최신 제출 1건 기준으로 난이도별 count 맵을 반환.
+     * 방금 제출한 내 점수는 merge로 보장.
+     */
+    private Map<Integer, Long> fetchRecentScoreMap(Long trackId, int myScore) {
+        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+        List<Object[]> rows = progressRepository.countByConditionScoreRecent3Days(trackId, threeDaysAgo);
 
-        if (latestProgressList.isEmpty()) return 0;
+        Map<Integer, Long> map = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            int score = ((Number) row[0]).intValue();
+            long cnt  = ((Number) row[1]).longValue();
+            map.put(score, cnt);
+        }
+        // 방금 제출한 내 케이스 반드시 포함 (쿼리 결과에 없을 수 있음)
+        map.merge(myScore, 1L, Long::max);
+        return map;
+    }
 
-        long sameScore = latestProgressList.stream()
-                .filter(lp -> Objects.equals(lp.getConditionScore(), conditionScore))
-                .count();
-
-        return (int) Math.round(sameScore * 100.0 / latestProgressList.size());
+    private LearningProgressSubmitResponse.CaseStats buildCaseStats(int score, long count) {
+        return new LearningProgressSubmitResponse.CaseStats(
+                score, count, SCORE_LABELS.getOrDefault(score, score + "점"));
     }
 
     // ── 공통 유틸 ─────────────────────────────────────────────────────────────

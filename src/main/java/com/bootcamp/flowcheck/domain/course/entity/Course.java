@@ -5,12 +5,15 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "COURSE")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor
 public class Course {
@@ -30,6 +33,9 @@ public class Course {
     @OrderBy("weekNumber ASC")
     private List<CourseWeek> weeks = new ArrayList<>();
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public Course(Track track, String name) {
         this.track = track;
@@ -43,5 +49,9 @@ public class Course {
     public void replaceWeeks(List<CourseWeek> newWeeks) {
         this.weeks.clear();
         this.weeks.addAll(newWeeks);
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
     }
 }

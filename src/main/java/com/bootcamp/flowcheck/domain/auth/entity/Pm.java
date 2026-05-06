@@ -29,6 +29,9 @@ public class Pm {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public Pm(String name, String email, String role, LocalDateTime createdAt) {
         this.name = name;

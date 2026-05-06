@@ -4,12 +4,14 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "TRACK")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @NoArgsConstructor
 public class Track {
@@ -39,6 +41,9 @@ public class Track {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Builder
     public Track(String name, String description, String courseType, Integer generation,
                  LocalDate startDate, LocalDate endDate, LocalDateTime createdAt) {
@@ -58,5 +63,9 @@ public class Track {
         this.generation = generation;
         this.startDate = startDate;
         this.endDate = endDate;
+    }
+
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
     }
 }

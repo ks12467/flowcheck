@@ -32,12 +32,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers("/progress/**").permitAll()
-                        // 트랙 관리 페이지 조회(GET)는 인증된 사용자 모두 허용
-                        .requestMatchers(HttpMethod.GET, "/admin/tracks").authenticated()
-                        // 트랙 CRUD API는 ADMIN만
-                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/tracks").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/admin/tracks/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/tracks/**").hasRole("ADMIN")
+                        // 영구 삭제(permanent) 및 어드민 DELETE는 ADMIN만
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/**").hasRole("ADMIN")
                         // 나머지는 인증된 사용자 모두 허용
                         .anyRequest().authenticated()
                 )

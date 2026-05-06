@@ -2,7 +2,7 @@ package com.bootcamp.flowcheck.web;
 
 import com.bootcamp.flowcheck.domain.auth.entity.Pm;
 import com.bootcamp.flowcheck.domain.auth.repository.PmRepository;
-import com.bootcamp.flowcheck.domain.course.entity.Course;
+import com.bootcamp.flowcheck.domain.course.dto.CourseResponse;
 import com.bootcamp.flowcheck.domain.course.repository.CourseRepository;
 import com.bootcamp.flowcheck.domain.progress.entity.LearningProgress;
 import com.bootcamp.flowcheck.domain.progress.repository.LearningProgressRepository;
@@ -228,13 +228,21 @@ public class WebController {
         return "admin/students";
     }
 
+    // ── 어드민: 삭제된 데이터 관리 ───────────────────────────────────────────
+
+    @GetMapping("/admin/deleted")
+    public String adminDeleted() {
+        return "admin/deleted";
+    }
+
     // ── 진척도 제출 폼 (인증 불필요) ─────────────────────────────────────────
 
     @GetMapping("/progress/{trackId}")
     public String progressForm(@PathVariable Long trackId, Model model) {
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
-        List<Course> courses = courseRepository.findAllByTrackIdWithWeeks(trackId);
+        List<CourseResponse> courses = courseRepository.findAllByTrackIdWithWeeks(trackId)
+                .stream().map(CourseResponse::of).toList();
         model.addAttribute("track", track);
         model.addAttribute("courses", courses);
         return "progress-form";

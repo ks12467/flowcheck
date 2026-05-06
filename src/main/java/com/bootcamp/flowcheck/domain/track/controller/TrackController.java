@@ -29,7 +29,6 @@ public class TrackController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<TrackResponse>> createTrack(@RequestBody @Valid TrackCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(trackService.createTrack(request), "트랙을 생성했습니다."));
     }
@@ -39,6 +38,12 @@ public class TrackController {
             @PathVariable Long trackId,
             @RequestBody @Valid TrackUpdateRequest request) {
         return ResponseEntity.ok(ApiResponse.success(trackService.updateTrack(trackId, request), "트랙을 수정했습니다."));
+    }
+
+    @DeleteMapping("/{trackId}")
+    public ResponseEntity<ApiResponse<Void>> deleteTrack(@PathVariable Long trackId) {
+        trackService.deleteTrack(trackId);
+        return ResponseEntity.ok(ApiResponse.success(null, "트랙이 삭제되었습니다."));
     }
 
     @PostMapping("/{trackId}/join")

@@ -371,6 +371,22 @@ input[type=checkbox].toggle { width: 40px; height: 22px; accent-color: var(--pri
     font-weight: 600;
 }
 
+/* ── 주차 행 (강의 관리) ────────────────────── */
+.week-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.week-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+    min-width: 44px;
+}
+.week-lecture-input {
+    max-width: 88px !important;
+}
+
 /* ── 트랙 태그 (PM 관리) ─────────────────────── */
 .track-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .track-tag {
@@ -394,6 +410,24 @@ input[type=checkbox].toggle { width: 40px; height: 22px; accent-color: var(--pri
     opacity: .6;
 }
 .tag-remove:hover { opacity: 1; }
+.badge-more {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    background: #F0F4F8;
+    color: var(--text-muted);
+    border: 1.5px dashed var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.badge-more:hover, .badge-more-open {
+    background: #EBF2FF;
+    color: var(--primary);
+    border-color: var(--primary);
+}
 
 /* ── 유틸리티 ────────────────────────────────── */
 .mt-4  { margin-top: 4px; }

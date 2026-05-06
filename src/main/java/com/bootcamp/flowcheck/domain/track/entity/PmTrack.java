@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "PM_TRACK")
 @Getter
@@ -26,6 +28,9 @@ public class PmTrack {
 
     @Column(length = 50)
     private String role;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Builder
     public PmTrack(Pm pm, Track track, String role) {

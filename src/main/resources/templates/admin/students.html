@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('수강생 관리')}"></head>
 <body>
 <div class="app-container">
@@ -128,7 +129,8 @@
     </div>
 </div>
 
-<script>
+<script th:inline="javascript">
+    const isAdmin = /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
     let currentTrackId = null;
 
     // ── 트랙 선택 & 목록 로드 ──────────────────────
@@ -170,8 +172,8 @@
                 <td style="text-align:center;">
                     <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;"
                             onclick="openEditModal(${s.studentId},'${esc(s.name)}','${esc(s.email||'')}','${esc(s.phone||'')}')">수정</button>
-                    <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;margin-left:4px;"
-                            onclick="deleteStudent(${s.studentId})">삭제</button>
+                    ${isAdmin ? `<button class="btn btn-danger" style="padding:4px 10px;font-size:12px;margin-left:4px;"
+                            onclick="deleteStudent(${s.studentId})">삭제</button>` : ''}
                 </td>
             </tr>
         `).join('');

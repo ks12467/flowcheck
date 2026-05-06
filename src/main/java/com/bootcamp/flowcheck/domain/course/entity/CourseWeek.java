@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "COURSE_WEEK")
 @Getter
@@ -24,6 +26,9 @@ public class CourseWeek {
 
     @Column(name = "lecture_count", nullable = false)
     private Integer lectureCount;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Builder
     public CourseWeek(Course course, Integer weekNumber, Integer lectureCount) {

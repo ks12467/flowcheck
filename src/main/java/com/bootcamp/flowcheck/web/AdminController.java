@@ -2,6 +2,7 @@ package com.bootcamp.flowcheck.web;
 
 import com.bootcamp.flowcheck.domain.auth.entity.Pm;
 import com.bootcamp.flowcheck.domain.auth.repository.PmRepository;
+import com.bootcamp.flowcheck.domain.course.service.CourseService;
 import com.bootcamp.flowcheck.domain.progress.entity.LearningProgress;
 import com.bootcamp.flowcheck.domain.progress.repository.LearningProgressRepository;
 import com.bootcamp.flowcheck.domain.student.dto.StudentBulkCreateRequest;
@@ -22,6 +23,8 @@ import com.bootcamp.flowcheck.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -39,6 +42,7 @@ public class AdminController {
     private final PmTrackRepository pmTrackRepository;
     private final StudentRepository studentRepository;
     private final LearningProgressRepository progressRepository;
+    private final CourseService courseService;
 
     // ── 어드민 트랙 관리 ─────────────────────────────────────────────────────
 
@@ -59,7 +63,7 @@ public class AdminController {
                 .generation(req.getGeneration())
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
-                .createdAt(java.time.LocalDateTime.now())
+                .createdAt(LocalDateTime.now())
                 .build();
         trackRepository.save(track);
         return ResponseEntity.ok(ApiResponse.success(TrackResponse.of(track, 0), "트랙이 생성되었습니다."));
@@ -79,11 +83,52 @@ public class AdminController {
     }
 
     @DeleteMapping("/tracks/{trackId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> deleteTrack(@PathVariable Long trackId) {
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
-        trackRepository.delete(track);
+        track.softDelete();
         return ResponseEntity.ok(ApiResponse.success(null, "트랙이 삭제되었습니다."));
+    }
+
+    // ── 삭제된 트랙 조회 / 복구 / 영구 삭제 ────────────────────────────────────
+
+    @GetMapping("/tracks/deleted")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDeletedTracks() {
+        List<Map<String, Object>> result = trackRepository.findAllDeleted().stream().map(t -> {
+            Map<String, Object> v = new LinkedHashMap<>();
+            v.put("trackId", t.getId());
+            v.put("name", t.getName());
+            v.put("courseType", t.getCourseType());
+            v.put("generation", t.getGeneration());
+            v.put("startDate", t.getStartDate());
+            v.put("endDate", t.getEndDate());
+            v.put("deletedAt", t.getDeletedAt());
+            return v;
+        }).toList();
+        return ResponseEntity.ok(ApiResponse.success(result, "삭제된 트랙 목록입니다."));
+    }
+
+    @PostMapping("/tracks/{trackId}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> restoreTrack(@PathVariable Long trackId) {
+        trackRepository.findDeletedById(trackId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
+        trackRepository.restoreById(trackId);
+        return ResponseEntity.ok(ApiResponse.success(null, "트랙이 복구되었습니다."));
+    }
+
+    @DeleteMapping("/tracks/{trackId}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> permanentDeleteTrack(@PathVariable Long trackId) {
+        trackRepository.findDeletedById(trackId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
+        trackRepository.permanentDeleteById(trackId);
+        return ResponseEntity.ok(ApiResponse.success(null, "트랙이 영구 삭제되었습니다."));
     }
 
     // ── PM 트랙 배정 ─────────────────────────────────────────────────────────
@@ -111,7 +156,7 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.success(null, "트랙 배정이 해제되었습니다."));
     }
 
-    // ── 어드민 수강생 관리 (PM-트랙 접근 권한 체크 없음) ─────────────────────
+    // ── 어드민 수강생 관리 ────────────────────────────────────────────────────
 
     @GetMapping("/tracks/{trackId}/students")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getStudents(
@@ -194,11 +239,68 @@ public class AdminController {
     }
 
     @DeleteMapping("/tracks/{trackId}/students/{studentId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> deleteStudent(@PathVariable Long trackId,
                                                            @PathVariable Long studentId) {
         Student student = studentRepository.findByIdAndTrack_Id(studentId, trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_NOT_FOUND));
-        studentRepository.delete(student);
+        student.softDelete();
         return ResponseEntity.ok(ApiResponse.success(null, "수강생이 삭제되었습니다."));
+    }
+
+    // ── 삭제된 수강생 조회 / 복구 / 영구 삭제 ──────────────────────────────────
+
+    @GetMapping("/students/deleted")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDeletedStudents() {
+        List<Map<String, Object>> result = studentRepository.findAllDeleted().stream().map(s -> {
+            Map<String, Object> v = new LinkedHashMap<>();
+            v.put("studentId", s.getId());
+            v.put("name", s.getName());
+            v.put("email", s.getEmail());
+            v.put("phone", s.getPhone());
+            try {
+                Track t = s.getTrack();
+                v.put("trackId", t != null ? t.getId() : null);
+                v.put("trackName", t != null ? t.getName() : "-");
+            } catch (Exception e) {
+                v.put("trackId", null);
+                v.put("trackName", "-");
+            }
+            v.put("deletedAt", s.getDeletedAt());
+            return v;
+        }).toList();
+        return ResponseEntity.ok(ApiResponse.success(result, "삭제된 수강생 목록입니다."));
+    }
+
+    @PostMapping("/students/{studentId}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> restoreStudent(@PathVariable Long studentId) {
+        studentRepository.findDeletedById(studentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_NOT_FOUND));
+        studentRepository.restoreById(studentId);
+        return ResponseEntity.ok(ApiResponse.success(null, "수강생이 복구되었습니다."));
+    }
+
+    @DeleteMapping("/students/{studentId}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> permanentDeleteStudent(@PathVariable Long studentId) {
+        studentRepository.findDeletedById(studentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_NOT_FOUND));
+        studentRepository.permanentDeleteById(studentId);
+        return ResponseEntity.ok(ApiResponse.success(null, "수강생이 영구 삭제되었습니다."));
+    }
+
+    // ── 강의 영구 삭제 ────────────────────────────────────────────────────────
+
+    @DeleteMapping("/courses/{courseId}/permanent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> permanentDeleteCourse(@PathVariable Long courseId) {
+        courseService.permanentDeleteCourse(courseId);
+        return ResponseEntity.ok(ApiResponse.success(null, "강의가 영구 삭제되었습니다."));
     }
 }

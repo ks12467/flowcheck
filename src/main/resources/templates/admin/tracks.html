@@ -9,8 +9,7 @@
     <main class="content-area">
         <div class="flex-between mb-16">
             <h1 class="page-title" style="margin-bottom:0">트랙 관리</h1>
-            <button sec:authorize="hasRole('ADMIN')"
-                    class="btn btn-primary" onclick="openCreateModal()">+ 트랙 생성</button>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ 트랙 생성</button>
         </div>
 
         <div class="card">
@@ -24,12 +23,13 @@
                             <th>시작일</th>
                             <th>종료일</th>
                             <th>수강생 수</th>
-                            <th style="width:120px;text-align:center;">관리</th>
+                            <th style="text-align:center;">강의</th>
+                            <th style="width:140px;text-align:center;">관리</th>
                         </tr>
                     </thead>
                     <tbody id="trackTableBody">
                         <tr th:if="${#lists.isEmpty(allTracks)}">
-                            <td colspan="7" style="text-align:center;color:#6C757D;padding:32px;">
+                            <td colspan="8" style="text-align:center;color:#6C757D;padding:32px;">
                                 등록된 트랙이 없습니다.
                             </td>
                         </tr>
@@ -43,6 +43,10 @@
                                 th:text="${t.endDate != null ? #temporals.format(t.endDate, 'yyyy.MM.dd') : '-'}">종료일</td>
                             <td>
                                 <span class="badge badge-none" th:id="'count-' + ${t.id}">-</span>
+                            </td>
+                            <td style="text-align:center;">
+                                <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;"
+                                        th:attr="onclick='openCourseModal(' + ${t.id} + ',\'' + ${t.name} + '\')'">강의 관리</button>
                             </td>
                             <td style="text-align:center;">
                                 <button sec:authorize="hasRole('ADMIN')"
@@ -61,7 +65,52 @@
     </main>
 </div>
 
-<!-- 트랙 생성 모달 -->
+<!-- ════════════════════════════════════════════
+     강의 관리 모달
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="courseModal" onclick="closeModal('courseModal', event)">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h2 class="modal-title">강의 관리 — <span id="courseModalTrackName"></span></h2>
+            <button class="modal-close" onclick="closeModal('courseModal')">×</button>
+        </div>
+
+        <!-- 등록된 강의 목록 -->
+        <div style="margin-bottom:24px;">
+            <div class="card-title" style="margin-bottom:10px;">등록된 강의</div>
+            <div id="courseList">
+                <div class="text-muted" style="font-size:13px;padding:8px 0;">강의를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin-bottom:20px;">
+
+        <!-- 강의 추가 폼 -->
+        <div class="card-title" style="margin-bottom:14px;">강의 추가</div>
+        <div class="form-group">
+            <label class="form-label">강의명 <span class="text-danger">*</span></label>
+            <input class="form-control" type="text" id="courseName" placeholder="예: Java 기초">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">주차별 강 수</label>
+            <div id="weekRows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <!-- JS로 동적 추가 -->
+            </div>
+            <button class="btn btn-outline" style="font-size:13px;" onclick="addWeekRow()">+ 주차 추가</button>
+        </div>
+
+        <div id="courseError" class="alert-error" style="display:none;margin-bottom:12px;"></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('courseModal')">닫기</button>
+            <button class="btn btn-primary" onclick="createCourse()">강의 등록</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     트랙 생성 모달
+════════════════════════════════════════════ -->
 <div class="modal-overlay" id="createModal" onclick="closeModal('createModal', event)">
     <div class="modal">
         <div class="modal-header">
@@ -69,13 +118,11 @@
             <button class="modal-close" onclick="closeModal('createModal')">×</button>
         </div>
 
-        <!-- 트랙명 미리보기 -->
         <div style="background:#F0F4F8;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
             <div style="font-size:11px;color:#6C757D;margin-bottom:4px;">생성될 트랙명</div>
             <div id="createPreview" style="font-size:16px;font-weight:700;color:#1F4E79;">과정 선택 후 표시됩니다</div>
         </div>
 
-        <!-- 과정 분류 -->
         <div class="form-group">
             <label class="form-label">과정 분류 <span class="text-danger">*</span></label>
             <div class="course-group-label">개발자 과정</div>
@@ -96,7 +143,6 @@
             </div>
         </div>
 
-        <!-- 기수 -->
         <div class="form-group">
             <label class="form-label">기수 <span class="text-danger">*</span></label>
             <div class="flex gap-8" style="align-items:center;">
@@ -125,7 +171,9 @@
     </div>
 </div>
 
-<!-- 트랙 수정 모달 -->
+<!-- ════════════════════════════════════════════
+     트랙 수정 모달
+════════════════════════════════════════════ -->
 <div class="modal-overlay" id="editModal" onclick="closeModal('editModal', event)">
     <div class="modal">
         <div class="modal-header">
@@ -135,13 +183,11 @@
 
         <input type="hidden" id="editTrackId">
 
-        <!-- 트랙명 미리보기 -->
         <div style="background:#F0F4F8;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
             <div style="font-size:11px;color:#6C757D;margin-bottom:4px;">수정될 트랙명</div>
             <div id="editPreview" style="font-size:16px;font-weight:700;color:#1F4E79;">-</div>
         </div>
 
-        <!-- 과정 분류 -->
         <div class="form-group">
             <label class="form-label">과정 분류 <span class="text-danger">*</span></label>
             <div class="course-group-label">개발자 과정</div>
@@ -162,7 +208,6 @@
             </div>
         </div>
 
-        <!-- 기수 -->
         <div class="form-group">
             <label class="form-label">기수 <span class="text-danger">*</span></label>
             <div class="flex gap-8" style="align-items:center;">
@@ -192,6 +237,8 @@
 </div>
 
 <script th:inline="javascript">
+    const isAdmin = /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
+
     // ── 수강생 수 비동기 로드 ───────────────────────
     (async () => {
         const res  = await fetch('/api/v1/admin/tracks');
@@ -203,7 +250,168 @@
         });
     })();
 
-    // ── 트랙명 미리보기 ────────────────────────────
+    // ── 모달 공통 ──────────────────────────────────
+    function closeModal(id, e) {
+        if (e && e.target !== document.getElementById(id)) return;
+        document.getElementById(id).classList.remove('open');
+    }
+
+    // ════════════════════════════════════════════
+    //  강의 관리
+    // ════════════════════════════════════════════
+    let currentCourseTrackId = null;
+
+    async function openCourseModal(trackId, trackName) {
+        currentCourseTrackId = trackId;
+        document.getElementById('courseModalTrackName').textContent = trackName;
+        document.getElementById('courseName').value = '';
+        document.getElementById('courseError').style.display = 'none';
+        resetWeekRows();
+        document.getElementById('courseModal').classList.add('open');
+        await loadCourses();
+    }
+
+    async function loadCourses() {
+        const listEl = document.getElementById('courseList');
+        listEl.innerHTML = '<div class="text-muted" style="font-size:13px;padding:8px 0;">불러오는 중...</div>';
+
+        const res  = await fetch(`/api/v1/tracks/${currentCourseTrackId}/courses`);
+        const data = await res.json();
+        renderCourseList(data.data || []);
+    }
+
+    function renderCourseList(courses) {
+        const listEl = document.getElementById('courseList');
+        if (courses.length === 0) {
+            listEl.innerHTML = '<div class="text-muted" style="font-size:13px;padding:8px 0;">등록된 강의가 없습니다.</div>';
+            return;
+        }
+        listEl.innerHTML = `
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>강의명</th>
+                            <th>주차 수</th>
+                            <th>주차별 강 수</th>
+                            ${isAdmin ? '<th style="width:64px;text-align:center;">삭제</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${courses.map(c => `
+                            <tr>
+                                <td style="font-weight:600;">${esc(c.name)}</td>
+                                <td>${c.weeks.length}주차</td>
+                                <td class="text-muted" style="font-size:12px;">
+                                    ${c.weeks.map(w => `${w.weekNumber}주차 ${w.lectureCount}강`).join(' · ')}
+                                </td>
+                                ${isAdmin ? `<td style="text-align:center;">
+                                    <button class="btn btn-danger" style="padding:3px 8px;font-size:12px;"
+                                            onclick="deleteCourse(${c.courseId})">삭제</button>
+                                </td>` : ''}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    // ── 주차 행 관리 ───────────────────────────────
+    let weekCount = 0;
+
+    function resetWeekRows() {
+        weekCount = 0;
+        document.getElementById('weekRows').innerHTML = '';
+        addWeekRow();
+    }
+
+    function addWeekRow() {
+        weekCount++;
+        const row = document.createElement('div');
+        row.className = 'week-row';
+        row.id = 'weekRow-' + weekCount;
+        row.innerHTML = `
+            <span class="week-label">${weekCount}주차</span>
+            <input class="form-control week-lecture-input" type="number" min="1"
+                   placeholder="강 수" data-week="${weekCount}">
+            <span style="font-size:13px;color:#6C757D;">강</span>
+            ${weekCount > 1
+                ? `<button class="btn btn-outline" style="padding:4px 8px;font-size:12px;color:#DC3545;border-color:#DC3545;"
+                           onclick="removeWeekRow(${weekCount})">−</button>`
+                : '<div style="width:44px;"></div>'}
+        `;
+        document.getElementById('weekRows').appendChild(row);
+    }
+
+    function removeWeekRow(n) {
+        document.getElementById('weekRow-' + n)?.remove();
+        // 주차 레이블 재정렬
+        const rows = document.querySelectorAll('#weekRows .week-row');
+        rows.forEach((row, idx) => {
+            row.querySelector('.week-label').textContent = (idx + 1) + '주차';
+            row.querySelector('.week-lecture-input').dataset.week = idx + 1;
+        });
+        weekCount = rows.length;
+    }
+
+    // ── 강의 등록 ──────────────────────────────────
+    async function createCourse() {
+        const name   = document.getElementById('courseName').value.trim();
+        const errEl  = document.getElementById('courseError');
+        errEl.style.display = 'none';
+
+        if (!name) {
+            errEl.textContent = '강의명을 입력해주세요.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        const inputs = document.querySelectorAll('#weekRows .week-lecture-input');
+        const weeks  = [];
+        let valid = true;
+        inputs.forEach((input, idx) => {
+            const lc = parseInt(input.value);
+            if (!lc || lc < 1) { valid = false; return; }
+            weeks.push({weekNumber: idx + 1, lectureCount: lc});
+        });
+
+        if (!valid || weeks.length === 0) {
+            errEl.textContent = '모든 주차의 강 수를 1 이상으로 입력해주세요.';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        const res  = await fetch(`/api/v1/tracks/${currentCourseTrackId}/courses`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, weeks})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            document.getElementById('courseName').value = '';
+            resetWeekRows();
+            await loadCourses();
+        } else {
+            errEl.textContent = data.message || '등록에 실패했습니다.';
+            errEl.style.display = 'block';
+        }
+    }
+
+    // ── 강의 삭제 ──────────────────────────────────
+    async function deleteCourse(courseId) {
+        if (!confirm('강의를 삭제하시겠습니까?')) return;
+        const res  = await fetch(`/api/v1/tracks/${currentCourseTrackId}/courses/${courseId}`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) {
+            await loadCourses();
+        } else {
+            alert(data.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    // ════════════════════════════════════════════
+    //  트랙 생성/수정/삭제
+    // ════════════════════════════════════════════
     function updatePreview(prefix) {
         const courseType = document.querySelector(`input[name="${prefix}CourseType"]:checked`)?.value || '';
         const generation = document.getElementById(prefix + 'Generation').value;
@@ -213,7 +421,6 @@
             : '과정과 기수를 선택해주세요';
     }
 
-    // ── 모달 ───────────────────────────────────────
     function openCreateModal() {
         document.querySelectorAll('input[name="createCourseType"]').forEach(r => r.checked = false);
         document.getElementById('createGeneration').value  = '';
@@ -230,8 +437,6 @@
         document.getElementById('editStartDate').value  = startDate !== 'null' ? startDate : '';
         document.getElementById('editEndDate').value    = endDate   !== 'null' ? endDate   : '';
         document.getElementById('editError').style.display = 'none';
-
-        // 라디오 선택
         document.querySelectorAll('input[name="editCourseType"]').forEach(r => {
             r.checked = r.value === courseType;
         });
@@ -239,12 +444,6 @@
         document.getElementById('editModal').classList.add('open');
     }
 
-    function closeModal(id, e) {
-        if (e && e.target !== document.getElementById(id)) return;
-        document.getElementById(id).classList.remove('open');
-    }
-
-    // ── 트랙 생성 ──────────────────────────────────
     async function createTrack() {
         const courseType = document.querySelector('input[name="createCourseType"]:checked')?.value;
         const generation = parseInt(document.getElementById('createGeneration').value);
@@ -252,10 +451,8 @@
         const endDate    = document.getElementById('createEndDate').value   || null;
         const errEl      = document.getElementById('createError');
         errEl.style.display = 'none';
-
         if (!courseType) { errEl.textContent = '과정 분류를 선택해주세요.'; errEl.style.display = 'block'; return; }
         if (!generation) { errEl.textContent = '기수를 입력해주세요.';     errEl.style.display = 'block'; return; }
-
         const res  = await fetch('/api/v1/admin/tracks', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -266,7 +463,6 @@
         else { errEl.textContent = data.message || '생성에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
-    // ── 트랙 수정 ──────────────────────────────────
     async function updateTrack() {
         const trackId    = document.getElementById('editTrackId').value;
         const courseType = document.querySelector('input[name="editCourseType"]:checked')?.value;
@@ -275,10 +471,8 @@
         const endDate    = document.getElementById('editEndDate').value   || null;
         const errEl      = document.getElementById('editError');
         errEl.style.display = 'none';
-
         if (!courseType) { errEl.textContent = '과정 분류를 선택해주세요.'; errEl.style.display = 'block'; return; }
         if (!generation) { errEl.textContent = '기수를 입력해주세요.';     errEl.style.display = 'block'; return; }
-
         const res  = await fetch(`/api/v1/admin/tracks/${trackId}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
@@ -289,13 +483,16 @@
         else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
-    // ── 트랙 삭제 ──────────────────────────────────
     async function deleteTrack(trackId) {
         if (!confirm('트랙을 삭제하시겠습니까?\n트랙에 속한 수강생과 학습 진척도도 함께 삭제됩니다.')) return;
         const res  = await fetch(`/api/v1/admin/tracks/${trackId}`, {method: 'DELETE'});
         const data = await res.json();
         if (res.ok) { location.reload(); }
         else { alert(data.message || '삭제에 실패했습니다.'); }
+    }
+
+    function esc(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 </script>
 </body>

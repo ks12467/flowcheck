@@ -1,4 +1,8 @@
 HELP.md
+
+### 환경별 설정 파일 (민감 정보 포함) ###
+src/main/resources/application-prod.yaml
+src/main/resources/application-local.yaml
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar

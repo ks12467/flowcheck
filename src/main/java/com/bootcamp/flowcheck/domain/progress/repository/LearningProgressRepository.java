@@ -79,4 +79,29 @@ public interface LearningProgressRepository extends JpaRepository<LearningProgre
             ORDER BY lp.conditionScore
             """)
     List<Object[]> countByConditionScoreInTracks(@Param("trackIds") List<Long> trackIds);
+
+    /**
+     * 최근 3일 내 수강생별 최신 제출 1건 기준 난이도별 수강생 수 집계
+     * (condition_score, count) 형태로 반환
+     */
+    @Query(value = """
+            SELECT lp.condition_score, COUNT(DISTINCT lp.student_id) AS cnt
+            FROM learning_progress lp
+            INNER JOIN (
+                SELECT student_id, MAX(submitted_at) AS latest
+                FROM learning_progress
+                WHERE submitted_at >= :threeDaysAgo
+                  AND student_id IN (
+                      SELECT id FROM student WHERE track_id = :trackId
+                  )
+                GROUP BY student_id
+            ) latest_lp
+              ON lp.student_id = latest_lp.student_id
+             AND lp.submitted_at = latest_lp.latest
+            GROUP BY lp.condition_score
+            ORDER BY cnt DESC
+            """, nativeQuery = true)
+    List<Object[]> countByConditionScoreRecent3Days(
+            @Param("trackId") Long trackId,
+            @Param("threeDaysAgo") LocalDateTime threeDaysAgo);
 }

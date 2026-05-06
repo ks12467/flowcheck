@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:replace="~{fragments/layout :: head('PM 관리')}"></head>
 <body>
 <div class="app-container">
@@ -32,14 +33,40 @@
                             <td style="font-weight:600;" th:text="${pm.name}">이름</td>
                             <td class="text-muted" th:text="${pm.email}">이메일</td>
                             <td>
-                                <div class="track-tags" th:id="'tags-' + ${pm.pmId}">
-                                    <span th:each="t : ${pm.tracks}" class="track-tag">
-                                        <span th:text="${t.trackName}">트랙명</span>
-                                        <button class="tag-remove"
-                                                th:attr="onclick='removeTrack(' + ${pm.pmId} + ',' + ${t.trackId} + ')'">×</button>
-                                    </span>
-                                    <span th:if="${#lists.isEmpty(pm.tracks)}" class="text-muted" style="font-size:12px;">없음</span>
-                                </div>
+                                <th:block th:if="${#lists.isEmpty(pm.tracks)}">
+                                    <span class="text-muted" style="font-size:12px;">없음</span>
+                                </th:block>
+                                <th:block th:if="${!#lists.isEmpty(pm.tracks)}">
+                                    <!-- 최신 트랙 1개 -->
+                                    <div class="flex gap-8" style="flex-wrap:wrap;align-items:center;">
+                                        <span class="track-tag">
+                                            <span th:text="${pm.tracks[0].trackName}">트랙명</span>
+                                            <button sec:authorize="hasRole('ADMIN')"
+                                                    class="tag-remove"
+                                                    th:attr="onclick='removeTrack(' + ${pm.pmId} + ',' + ${pm.tracks[0].trackId} + ')'">×</button>
+                                        </span>
+                                        <!-- +N개 토글 버튼 -->
+                                        <th:block th:if="${#lists.size(pm.tracks) > 1}">
+                                            <button class="badge-more"
+                                                    th:id="'more-btn-' + ${pm.pmId}"
+                                                    th:attr="onclick='toggleMoreTracks(' + ${pm.pmId} + ')'">
+                                                +<span th:text="${#lists.size(pm.tracks) - 1}">N</span>개
+                                            </button>
+                                            <!-- 숨겨진 트랙 목록 -->
+                                            <div th:id="'more-tracks-' + ${pm.pmId}"
+                                                 style="display:none;width:100%;margin-top:6px;display:none;">
+                                                <span th:each="t,iter : ${pm.tracks}"
+                                                      th:if="${iter.index > 0}"
+                                                      class="track-tag" style="margin-bottom:4px;">
+                                                    <span th:text="${t.trackName}">트랙명</span>
+                                                    <button sec:authorize="hasRole('ADMIN')"
+                                                            class="tag-remove"
+                                                            th:attr="onclick='removeTrack(' + ${pm.pmId} + ',' + ${t.trackId} + ')'">×</button>
+                                                </span>
+                                            </div>
+                                        </th:block>
+                                    </div>
+                                </th:block>
                             </td>
                             <td>
                                 <div class="flex gap-8">
@@ -124,6 +151,17 @@
             errEl.textContent = data.message || '오류가 발생했습니다.';
             errEl.style.display = 'block';
         }
+    }
+
+    // ── 트랙 토글 ──────────────────────────────────
+    function toggleMoreTracks(pmId) {
+        const panel = document.getElementById('more-tracks-' + pmId);
+        const btn   = document.getElementById('more-btn-' + pmId);
+        const isOpen = panel.style.display !== 'none';
+        panel.style.display = isOpen ? 'none' : 'flex';
+        panel.style.flexWrap = 'wrap';
+        panel.style.gap = '6px';
+        btn.classList.toggle('badge-more-open', !isOpen);
     }
 
     // ── 트랙 배정 ──────────────────────────────────

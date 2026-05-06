@@ -16,6 +16,6 @@ public interface PmTrackRepository extends JpaRepository<PmTrack, Long> {
 
     void deleteByPm_IdAndTrack_Id(Long pmId, Long trackId);
 
-    @Query("SELECT pt FROM PmTrack pt JOIN FETCH pt.track WHERE pt.pm.id = :pmId")
+    @Query("SELECT pt FROM PmTrack pt JOIN FETCH pt.track WHERE pt.pm.id = :pmId ORDER BY pt.id DESC")
     List<PmTrack> findAllByPmIdWithTrack(@Param("pmId") Long pmId);
 }

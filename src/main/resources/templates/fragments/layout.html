@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <!-- HEAD 프래그먼트 -->
 <head th:fragment="head(pageTitle)">
@@ -29,6 +30,9 @@
         </li>
         <li>
             <a th:href="@{/admin/students}" class="sidebar-item">🎓 수강생 관리</a>
+        </li>
+        <li sec:authorize="hasRole('ADMIN')">
+            <a th:href="@{/admin/deleted}" class="sidebar-item">🗑️ 삭제 데이터 관리</a>
         </li>
         <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
             <li><div class="sidebar-section">내 트랙</div></li>

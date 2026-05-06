@@ -108,6 +108,15 @@ public class TrackService {
     }
 
     @Transactional
+    public void deleteTrack(Long trackId) {
+        Long pmId = getCurrentPmId();
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
+        validateAccess(pmId, trackId);
+        track.softDelete();
+    }
+
+    @Transactional
     public void leaveTrack(Long trackId) {
         Long pmId = getCurrentPmId();
         trackRepository.findById(trackId)

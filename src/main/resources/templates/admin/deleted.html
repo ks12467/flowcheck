@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('삭제 데이터 관리')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <h1 class="page-title">삭제 데이터 관리</h1>
+
+        <!-- 탭 -->
+        <div class="flex gap-8 mb-16">
+            <button class="btn btn-primary" id="tab-tracks" onclick="showTab('tracks')">트랙</button>
+            <button class="btn btn-outline" id="tab-students" onclick="showTab('students')">수강생</button>
+        </div>
+
+        <!-- 트랙 목록 -->
+        <div id="section-tracks">
+            <div class="card">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>트랙명</th>
+                                <th>과정 유형</th>
+                                <th>기수</th>
+                                <th>시작일</th>
+                                <th>종료일</th>
+                                <th>삭제일시</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deleted-tracks-body">
+                            <tr><td colspan="7" style="text-align:center;color:#6C757D;padding:32px;">불러오는 중...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 수강생 목록 -->
+        <div id="section-students" style="display:none;">
+            <div class="card">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>이름</th>
+                                <th>이메일</th>
+                                <th>연락처</th>
+                                <th>소속 트랙</th>
+                                <th>삭제일시</th>
+                                <th>관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deleted-students-body">
+                            <tr><td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">불러오는 중...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    let currentTab = 'tracks';
+
+    function showTab(tab) {
+        currentTab = tab;
+        document.getElementById('section-tracks').style.display = tab === 'tracks' ? '' : 'none';
+        document.getElementById('section-students').style.display = tab === 'students' ? '' : 'none';
+        document.getElementById('tab-tracks').className = tab === 'tracks' ? 'btn btn-primary' : 'btn btn-outline';
+        document.getElementById('tab-students').className = tab === 'students' ? 'btn btn-primary' : 'btn btn-outline';
+        if (tab === 'tracks') loadDeletedTracks();
+        else loadDeletedStudents();
+    }
+
+    function fmtDate(val) {
+        if (!val) return '-';
+        return val.toString().replace('T', ' ').slice(0, 16);
+    }
+
+    // ── 트랙 ──────────────────────────────────────────────────────────────────
+
+    async function loadDeletedTracks() {
+        const tbody = document.getElementById('deleted-tracks-body');
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6C757D;padding:24px;">불러오는 중...</td></tr>';
+        const res = await fetch('/api/v1/admin/tracks/deleted');
+        const data = await res.json();
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc3545;">${data.message}</td></tr>`; return; }
+        const list = data.data;
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6C757D;padding:24px;">삭제된 트랙이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(t => `
+            <tr>
+                <td style="font-weight:600;">${t.name || '-'}</td>
+                <td>${t.courseType || '-'}</td>
+                <td>${t.generation != null ? t.generation + '기' : '-'}</td>
+                <td>${t.startDate || '-'}</td>
+                <td>${t.endDate || '-'}</td>
+                <td class="text-muted">${fmtDate(t.deletedAt)}</td>
+                <td>
+                    <div class="flex gap-8">
+                        <button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="restoreTrack(${t.trackId})">복구</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;background:#dc3545;color:#fff;" onclick="permanentDeleteTrack(${t.trackId})">영구 삭제</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function restoreTrack(trackId) {
+        if (!confirm('이 트랙을 복구하시겠습니까?')) return;
+        const res = await fetch(`/api/v1/admin/tracks/${trackId}/restore`, {method: 'POST'});
+        const data = await res.json();
+        if (res.ok) { alert(data.message); loadDeletedTracks(); }
+        else alert(data.message || '오류가 발생했습니다.');
+    }
+
+    async function permanentDeleteTrack(trackId) {
+        if (!confirm('영구 삭제하면 복구할 수 없습니다. 계속하시겠습니까?')) return;
+        const res = await fetch(`/api/v1/admin/tracks/${trackId}/permanent`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) { alert(data.message); loadDeletedTracks(); }
+        else alert(data.message || '오류가 발생했습니다.');
+    }
+
+    // ── 수강생 ────────────────────────────────────────────────────────────────
+
+    async function loadDeletedStudents() {
+        const tbody = document.getElementById('deleted-students-body');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6C757D;padding:24px;">불러오는 중...</td></tr>';
+        const res = await fetch('/api/v1/admin/students/deleted');
+        const data = await res.json();
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#dc3545;">${data.message}</td></tr>`; return; }
+        const list = data.data;
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6C757D;padding:24px;">삭제된 수강생이 없습니다.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(s => `
+            <tr>
+                <td style="font-weight:600;">${s.name || '-'}</td>
+                <td>${s.email || '-'}</td>
+                <td>${s.phone || '-'}</td>
+                <td>${s.trackName || '-'}</td>
+                <td class="text-muted">${fmtDate(s.deletedAt)}</td>
+                <td>
+                    <div class="flex gap-8">
+                        <button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="restoreStudent(${s.studentId})">복구</button>
+                        <button class="btn" style="padding:4px 12px;font-size:12px;background:#dc3545;color:#fff;" onclick="permanentDeleteStudent(${s.studentId})">영구 삭제</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function restoreStudent(studentId) {
+        if (!confirm('이 수강생을 복구하시겠습니까?')) return;
+        const res = await fetch(`/api/v1/admin/students/${studentId}/restore`, {method: 'POST'});
+        const data = await res.json();
+        if (res.ok) { alert(data.message); loadDeletedStudents(); }
+        else alert(data.message || '오류가 발생했습니다.');
+    }
+
+    async function permanentDeleteStudent(studentId) {
+        if (!confirm('영구 삭제하면 복구할 수 없습니다. 계속하시겠습니까?')) return;
+        const res = await fetch(`/api/v1/admin/students/${studentId}/permanent`, {method: 'DELETE'});
+        const data = await res.json();
+        if (res.ok) { alert(data.message); loadDeletedStudents(); }
+        else alert(data.message || '오류가 발생했습니다.');
+    }
+
+    // 초기 로드
+    loadDeletedTracks();
+</script>
+</body>
+</html>

@@ -156,7 +156,7 @@ public class StudentService {
         Student student = studentRepository.findByIdAndTrack_Id(studentId, trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STUDENT_NOT_FOUND));
 
-        studentRepository.delete(student);
+        student.softDelete();
     }
 
     private Long getCurrentPmId() {
