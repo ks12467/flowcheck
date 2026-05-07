@@ -64,8 +64,9 @@
                 btn.setAttribute('aria-expanded', 'true');
             }
         }
-        // 현재 URL이 운영 관리 하위 페이지면 자동으로 펼치기
+
         (function() {
+            // 운영 관리 하위 페이지면 자동으로 펼치기
             const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students'];
             if (adminPaths.some(p => location.pathname.startsWith(p))) {
                 const btn = document.querySelector('[onclick*="adminMenu"]');
@@ -76,6 +77,27 @@
                     btn.setAttribute('aria-expanded', 'true');
                 }
             }
+
+            // 768px 이하: 햄버거 버튼 & 백드롭 주입
+            const sidebar = document.querySelector('.sidebar');
+
+            const backdrop = document.createElement('div');
+            backdrop.className = 'sidebar-backdrop';
+            backdrop.addEventListener('click', () => {
+                sidebar.classList.remove('mobile-open');
+                backdrop.classList.remove('open');
+            });
+            document.body.appendChild(backdrop);
+
+            const hamburger = document.createElement('button');
+            hamburger.className = 'mobile-hamburger';
+            hamburger.setAttribute('aria-label', '메뉴 열기');
+            hamburger.innerHTML = '☰';
+            hamburger.addEventListener('click', () => {
+                sidebar.classList.toggle('mobile-open');
+                backdrop.classList.toggle('open');
+            });
+            document.body.appendChild(hamburger);
         })();
     </script>
 </nav>

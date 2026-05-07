@@ -70,7 +70,7 @@
                 <div class="survey-link-label" th:text="${stat.trackName}">트랙명</div>
                 <div class="survey-link-url"
                      th:id="'link-' + ${stat.trackId}"
-                     th:text="${#request.getScheme() + '://' + #request.getServerName() + (#request.getServerPort() != 80 and #request.getServerPort() != 443 ? ':' + #request.getServerPort() : '') + '/progress/' + stat.trackId}">
+                     th:text="${baseUrl + '/progress/' + stat.trackId}">
                     URL
                 </div>
                 <button class="btn-copy"

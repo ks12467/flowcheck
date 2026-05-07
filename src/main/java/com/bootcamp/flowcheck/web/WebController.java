@@ -14,6 +14,7 @@ import com.bootcamp.flowcheck.domain.track.repository.TrackRepository;
 import com.bootcamp.flowcheck.global.exception.BusinessException;
 import com.bootcamp.flowcheck.global.exception.ErrorCode;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -84,7 +85,7 @@ public class WebController {
     // ── 대시보드 ─────────────────────────────────────────────────────────────
 
     @GetMapping("/dashboard")
-    public String dashboard(Model model, Authentication authentication) {
+    public String dashboard(Model model, Authentication authentication, HttpServletRequest request) {
         Long pmId = Long.parseLong(authentication.getName());
         List<Track> tracks = trackRepository.findAllByPmId(pmId);
         List<Long> trackIds = tracks.stream().map(Track::getId).toList();
@@ -118,6 +119,12 @@ public class WebController {
             }
         }
         model.addAttribute("conditionCounts", conditionCounts);
+
+        int port = request.getServerPort();
+        String scheme = request.getScheme();
+        String portStr = (("https".equals(scheme) && port == 443) || ("http".equals(scheme) && port == 80))
+                ? "" : ":" + port;
+        model.addAttribute("baseUrl", scheme + "://" + request.getServerName() + portStr);
 
         return "dashboard";
     }

@@ -54,6 +54,9 @@ button { cursor: pointer; }
     font-size: 13.5px;
     transition: background .15s;
     border-radius: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .sidebar-item:hover, .sidebar-item.active {
     background: rgba(255,255,255,.12);
@@ -497,6 +500,83 @@ input[type=checkbox].toggle { width: 40px; height: 22px; accent-color: var(--pri
 }
 .btn-copy:hover { opacity: .85; }
 .btn-copy.copied { background: var(--success); }
+
+/* ── 반응형 ───────────────────────────────────── */
+
+/* 모바일 햄버거 버튼 (JS로 주입, 기본 숨김) */
+.mobile-hamburger {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 300;
+    width: 38px;
+    height: 38px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 18px;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    z-index: 99;
+}
+.sidebar-backdrop.open { display: block; }
+
+/* 1100px 이하: 2단 그리드 → 1단 */
+@media (max-width: 1100px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+}
+
+/* 900px 이하: 콘텐츠 패딩 줄이기 */
+@media (max-width: 900px) {
+    .content-area { padding: 20px 18px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+
+/* 768px 이하: 사이드바 오프캔버스, 콘텐츠 풀폭 */
+@media (max-width: 768px) {
+    :root { --sidebar-w: 0px; }
+
+    .sidebar {
+        transform: translateX(-230px);
+        transition: transform .25s ease;
+        width: 230px !important;
+        z-index: 200;
+    }
+    .sidebar.mobile-open { transform: translateX(0); }
+
+    .content-area {
+        margin-left: 0;
+        padding: 60px 16px 16px; /* 상단 햄버거 버튼 공간 */
+    }
+
+    .mobile-hamburger { display: flex; align-items: center; justify-content: center; }
+
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+
+    .survey-link-row { flex-wrap: wrap; }
+    .survey-link-label { min-width: unset; width: 100%; margin-bottom: 2px; }
+    .survey-link-url { min-width: 0; width: 100%; }
+
+    .urgent-cards { flex-direction: column; }
+    .urgent-card { min-width: unset; width: 100%; }
+}
+
+/* 480px 이하: 추가 여백 축소 */
+@media (max-width: 480px) {
+    .content-area { padding: 56px 12px 12px; }
+    .card { padding: 16px; }
+    .page-title { font-size: 18px; }
+}
 
 /* ── 유틸리티 ────────────────────────────────── */
 .mt-4  { margin-top: 4px; }
