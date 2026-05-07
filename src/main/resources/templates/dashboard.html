@@ -59,10 +59,57 @@
                 <canvas id="conditionChart" height="180"></canvas>
             </div>
         </div>
+
+        <!-- 수강생 설문 제출 링크 -->
+        <div class="card">
+            <div class="card-title">🔗 수강생 설문 제출 링크</div>
+            <div th:if="${#lists.isEmpty(trackStats)}" class="text-muted" style="font-size:13px;">
+                배정된 트랙이 없습니다.
+            </div>
+            <div th:each="stat : ${trackStats}" class="survey-link-row">
+                <div class="survey-link-label" th:text="${stat.trackName}">트랙명</div>
+                <div class="survey-link-url"
+                     th:id="'link-' + ${stat.trackId}"
+                     th:text="${#request.getScheme() + '://' + #request.getServerName() + (#request.getServerPort() != 80 and #request.getServerPort() != 443 ? ':' + #request.getServerPort() : '') + '/progress/' + stat.trackId}">
+                    URL
+                </div>
+                <button class="btn-copy"
+                        th:onclick="|copyLink('link-' + ${stat.trackId}, this)|">
+                    복사
+                </button>
+            </div>
+        </div>
     </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    function copyLink(elementId, btn) {
+        const text = document.getElementById(elementId).textContent.trim();
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = '복사';
+                btn.classList.remove('copied');
+            }, 2000);
+        }).catch(() => {
+            // fallback for non-HTTPS
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = '복사';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+</script>
 <script th:inline="javascript">
     const counts = /*[[${conditionCounts}]]*/ [0,0,0,0,0];
     const ctx = document.getElementById('conditionChart').getContext('2d');

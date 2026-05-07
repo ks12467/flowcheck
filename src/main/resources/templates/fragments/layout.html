@@ -22,16 +22,19 @@
         <li>
             <a th:href="@{/dashboard}" class="sidebar-item">📊 대시보드</a>
         </li>
+        <!-- 운영 관리 토글 그룹 -->
         <li>
-            <a th:href="@{/admin/tracks}" class="sidebar-item">🗂️ 트랙 관리</a>
+            <button class="sidebar-toggle" onclick="toggleSidebarMenu(this, 'adminMenu')" aria-expanded="false">
+                ⚙️ 운영 관리
+                <span class="toggle-arrow">▾</span>
+            </button>
+            <ul class="sidebar-submenu" id="adminMenu" style="display:none;">
+                <li><a th:href="@{/admin/tracks}" class="sidebar-item sidebar-subitem">🗂️ 트랙 관리</a></li>
+                <li><a th:href="@{/admin/pms}" class="sidebar-item sidebar-subitem">👥 PM 관리</a></li>
+                <li><a th:href="@{/admin/students}" class="sidebar-item sidebar-subitem">🎓 수강생 관리</a></li>
+            </ul>
         </li>
-        <li>
-            <a th:href="@{/admin/pms}" class="sidebar-item">👥 PM 관리</a>
-        </li>
-        <li>
-            <a th:href="@{/admin/students}" class="sidebar-item">🎓 수강생 관리</a>
-        </li>
-        <li sec:authorize="hasRole('ADMIN')">
+        <li th:if="${pm != null and pm.role == 'ADMIN'}">
             <a th:href="@{/admin/deleted}" class="sidebar-item">🗑️ 삭제 데이터 관리</a>
         </li>
         <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
@@ -47,6 +50,34 @@
         <div class="pm-name" th:if="${pm != null}" th:text="${pm.name} + ' PM'">이름 PM</div>
         <a th:href="@{/logout}" class="btn-logout" style="display:block;text-align:center;">로그아웃</a>
     </div>
+    <script>
+        function toggleSidebarMenu(btn, menuId) {
+            const menu = document.getElementById(menuId);
+            const isOpen = btn.classList.contains('open');
+            if (isOpen) {
+                menu.style.display = 'none';
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            } else {
+                menu.style.display = 'block';
+                btn.classList.add('open');
+                btn.setAttribute('aria-expanded', 'true');
+            }
+        }
+        // 현재 URL이 운영 관리 하위 페이지면 자동으로 펼치기
+        (function() {
+            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students'];
+            if (adminPaths.some(p => location.pathname.startsWith(p))) {
+                const btn = document.querySelector('[onclick*="adminMenu"]');
+                const menu = document.getElementById('adminMenu');
+                if (btn && menu) {
+                    menu.style.display = 'block';
+                    btn.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            }
+        })();
+    </script>
 </nav>
 
 </html>
