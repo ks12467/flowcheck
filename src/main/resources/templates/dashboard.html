@@ -60,6 +60,42 @@
             </div>
         </div>
 
+        <!-- 구글폼 응답 현황 -->
+        <div class="card">
+            <div class="card-title">📝 구글폼 응답 현황</div>
+            <div id="gfEmptyMsg" class="text-muted" style="font-size:13px;display:none;">
+                연결된 구글폼이 없습니다.
+            </div>
+            <div id="gfContent">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+                    <select id="gfTrackSelect" class="form-control" style="max-width:220px;"
+                            onchange="onGfTrackChange()">
+                        <option value="">트랙 선택</option>
+                    </select>
+                    <select id="gfFormSelect" class="form-control" style="max-width:240px;"
+                            onchange="onGfFormChange()" disabled>
+                        <option value="">폼 선택</option>
+                    </select>
+                </div>
+                <div id="gfStats" style="display:none;">
+                    <div class="grid-2" style="gap:12px;">
+                        <div class="card" style="margin-bottom:0;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfResponseCount">-</div>
+                            <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총 응답 수</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">(스프레드시트 연동 예정)</div>
+                        </div>
+                        <div class="card" style="margin-bottom:0;text-align:center;">
+                            <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfTotalStudents">-</div>
+                            <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총원</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="gfSelectMsg" class="text-muted" style="font-size:13px;">
+                    트랙과 구글폼을 선택하면 현황이 표시됩니다.
+                </div>
+            </div>
+        </div>
+
         <!-- 수강생 설문 제출 링크 -->
         <div class="card">
             <div class="card-title">🔗 수강생 설문 제출 링크</div>
@@ -69,12 +105,12 @@
             <div th:each="stat : ${trackStats}" class="survey-link-row">
                 <div class="survey-link-label" th:text="${stat.trackName}">트랙명</div>
                 <div class="survey-link-url"
-                     th:id="'link-' + ${stat.trackId}"
                      th:text="${baseUrl + '/progress/' + stat.trackId}">
                     URL
                 </div>
                 <button class="btn-copy"
-                        th:onclick="|copyLink('link-' + ${stat.trackId}, this)|">
+                        th:attr="data-url=${baseUrl + '/progress/' + stat.trackId}"
+                        onclick="copyLink(this)">
                     복사
                 </button>
             </div>
@@ -82,32 +118,90 @@
     </main>
 </div>
 
+<script th:inline="javascript">
+    (function() {
+        const forms = /*[[${googleForms}]]*/ [];
+        const stats = /*[[${trackStats}]]*/ [];
+
+        if (forms.length === 0) {
+            document.getElementById('gfEmptyMsg').style.display = 'block';
+            document.getElementById('gfContent').style.display = 'none';
+            return;
+        }
+
+        // 트랙 드롭다운 채우기 (폼이 있는 트랙만)
+        const trackIds = [...new Set(forms.map(f => f.trackId))];
+        const trackSelect = document.getElementById('gfTrackSelect');
+        stats.filter(s => trackIds.includes(s.trackId)).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.trackId;
+            opt.textContent = s.trackName;
+            opt.dataset.students = s.totalStudents;
+            trackSelect.appendChild(opt);
+        });
+
+        window.onGfTrackChange = function() {
+            const trackId = parseInt(trackSelect.value);
+            const formSelect = document.getElementById('gfFormSelect');
+            formSelect.innerHTML = '<option value="">폼 선택</option>';
+            document.getElementById('gfStats').style.display = 'none';
+            document.getElementById('gfSelectMsg').style.display = 'block';
+
+            if (!trackId) { formSelect.disabled = true; return; }
+
+            formSelect.disabled = false;
+            forms.filter(f => f.trackId === trackId).forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.formId;
+                opt.textContent = f.name;
+                formSelect.appendChild(opt);
+            });
+        };
+
+        window.onGfFormChange = function() {
+            const trackOpt = trackSelect.options[trackSelect.selectedIndex];
+            const formId = document.getElementById('gfFormSelect').value;
+            if (!formId) {
+                document.getElementById('gfStats').style.display = 'none';
+                document.getElementById('gfSelectMsg').style.display = 'block';
+                return;
+            }
+            document.getElementById('gfSelectMsg').style.display = 'none';
+            document.getElementById('gfStats').style.display = 'block';
+            document.getElementById('gfResponseCount').textContent = '-';
+            document.getElementById('gfTotalStudents').textContent = (trackOpt.dataset.students || '-') + '명';
+        };
+    })();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    function copyLink(elementId, btn) {
-        const text = document.getElementById(elementId).textContent.trim();
-        navigator.clipboard.writeText(text).then(() => {
+    async function copyLink(btn) {
+        const text = btn.getAttribute('data-url');
+
+        function markCopied() {
             btn.textContent = '복사됨!';
             btn.classList.add('copied');
             setTimeout(() => {
                 btn.textContent = '복사';
                 btn.classList.remove('copied');
             }, 2000);
-        }).catch(() => {
-            // fallback for non-HTTPS
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
+        }
+
+        try {
+            await navigator.clipboard.writeText(text);
+            markCopied();
+        } catch {
+            // HTTP 환경 등 Clipboard API 미지원 시 fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
             document.execCommand('copy');
-            document.body.removeChild(el);
-            btn.textContent = '복사됨!';
-            btn.classList.add('copied');
-            setTimeout(() => {
-                btn.textContent = '복사';
-                btn.classList.remove('copied');
-            }, 2000);
-        });
+            document.body.removeChild(ta);
+            markCopied();
+        }
     }
 </script>
 <script th:inline="javascript">

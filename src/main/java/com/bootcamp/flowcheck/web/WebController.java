@@ -4,6 +4,7 @@ import com.bootcamp.flowcheck.domain.auth.entity.Pm;
 import com.bootcamp.flowcheck.domain.auth.repository.PmRepository;
 import com.bootcamp.flowcheck.domain.course.dto.CourseResponse;
 import com.bootcamp.flowcheck.domain.course.repository.CourseRepository;
+import com.bootcamp.flowcheck.domain.form.repository.GoogleFormRepository;
 import com.bootcamp.flowcheck.domain.progress.entity.LearningProgress;
 import com.bootcamp.flowcheck.domain.progress.repository.LearningProgressRepository;
 import com.bootcamp.flowcheck.domain.student.entity.Student;
@@ -41,6 +42,7 @@ public class WebController {
     private final StudentRepository studentRepository;
     private final LearningProgressRepository progressRepository;
     private final CourseRepository courseRepository;
+    private final GoogleFormRepository googleFormRepository;
 
     // 인증된 모든 요청에 PM 정보와 사이드바 트랙 목록을 주입
     @ModelAttribute
@@ -119,6 +121,17 @@ public class WebController {
             }
         }
         model.addAttribute("conditionCounts", conditionCounts);
+
+        // 구글폼 현황
+        List<Map<String, Object>> googleForms = trackIds.isEmpty() ? List.of()
+                : googleFormRepository.findAllByTrackIdIn(trackIds).stream().map(f -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("formId", f.getId());
+                    m.put("name", f.getName());
+                    m.put("trackId", f.getTrack().getId());
+                    return m;
+                }).toList();
+        model.addAttribute("googleForms", googleForms);
 
         int port = request.getServerPort();
         String scheme = request.getScheme();
@@ -245,6 +258,12 @@ public class WebController {
     @GetMapping("/admin/deleted")
     public String adminDeleted() {
         return "admin/deleted";
+    }
+
+    @GetMapping("/admin/forms")
+    public String adminForms(Model model) {
+        model.addAttribute("allTracks", trackRepository.findAll());
+        return "admin/forms";
     }
 
     // ── 진척도 제출 폼 (인증 불필요) ─────────────────────────────────────────

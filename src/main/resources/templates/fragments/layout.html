@@ -32,6 +32,7 @@
                 <li><a th:href="@{/admin/tracks}" class="sidebar-item sidebar-subitem">🗂️ 트랙 관리</a></li>
                 <li><a th:href="@{/admin/pms}" class="sidebar-item sidebar-subitem">👥 PM 관리</a></li>
                 <li><a th:href="@{/admin/students}" class="sidebar-item sidebar-subitem">🎓 수강생 관리</a></li>
+                <li><a th:href="@{/admin/forms}" class="sidebar-item sidebar-subitem">📋 구글폼 관리</a></li>
             </ul>
         </li>
         <li th:if="${pm != null and pm.role == 'ADMIN'}">
@@ -67,7 +68,7 @@
 
         (function() {
             // 운영 관리 하위 페이지면 자동으로 펼치기
-            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students'];
+            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms'];
             if (adminPaths.some(p => location.pathname.startsWith(p))) {
                 const btn = document.querySelector('[onclick*="adminMenu"]');
                 const menu = document.getElementById('adminMenu');

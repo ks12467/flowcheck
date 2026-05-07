@@ -15,6 +15,7 @@ public enum ErrorCode {
     TRACK_NOT_FOUND(404, "트랙을 찾을 수 없습니다."),
     STUDENT_NOT_FOUND(404, "수강생을 찾을 수 없습니다."),
     COURSE_NOT_FOUND(404, "코스를 찾을 수 없습니다."),
+    GOOGLE_FORM_NOT_FOUND(404, "구글폼을 찾을 수 없습니다."),
     COURSE_WEEK_NOT_FOUND(404, "코스 주차를 찾을 수 없습니다."),
     DUPLICATE_STUDENT(409, "이미 등록된 수강생입니다."),
     DUPLICATE_WEEK(409, "이미 존재하는 주차입니다."),
