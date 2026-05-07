@@ -53,6 +53,10 @@ public class WebController {
         }
     }
 
+    @GetMapping("/")
+    public String root() {
+        return "redirect:/dashboard";
+    }
     // ── 로그인 ──────────────────────────────────────────────────────────────
 
     @GetMapping("/login")
