@@ -49,7 +49,8 @@ public class WebController {
             Long pmId = Long.parseLong(authentication.getName());
             pmRepository.findById(pmId).ifPresent(pm -> model.addAttribute("pm", pm));
             model.addAttribute("sidebarTracks", trackRepository.findAllByPmId(pmId));
-        } catch (NumberFormatException ignored) {
+        } catch (Exception ignored) {
+            // DB 오류(스키마 불일치 등)가 페이지 렌더링을 막지 않도록 방어 처리
         }
     }
 

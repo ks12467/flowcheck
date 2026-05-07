@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오류 - FlowCheck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-box" style="text-align:center;">
+        <div class="login-logo" th:text="${statusCode ?: 500}">500</div>
+        <div class="login-sub" th:text="${errorMessage ?: '서버 오류가 발생했습니다.'}">오류 메시지</div>
+        <a href="/dashboard" class="btn-google" style="margin-top:24px;text-decoration:none;">
+            대시보드로 이동
+        </a>
+    </div>
+</div>
+</body>
+</html>
