@@ -78,15 +78,24 @@
                     </select>
                 </div>
                 <div id="gfStats" style="display:none;">
-                    <div class="grid-2" style="gap:12px;">
+                    <div class="grid-2" style="gap:12px;margin-bottom:12px;">
                         <div class="card" style="margin-bottom:0;text-align:center;">
                             <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfResponseCount">-</div>
                             <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총 응답 수</div>
-                            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">(스프레드시트 연동 예정)</div>
                         </div>
                         <div class="card" style="margin-bottom:0;text-align:center;">
                             <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfTotalStudents">-</div>
                             <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총원</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-wrap">
+                        <div class="progress-bar-label">
+                            <span>제출률</span>
+                            <span id="gfRate" style="font-weight:600;color:var(--primary);">-</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="gfRateBar"
+                                 style="width:0%;background:var(--success);transition:width .5s;"></div>
                         </div>
                     </div>
                 </div>
@@ -158,7 +167,7 @@
             });
         };
 
-        window.onGfFormChange = function() {
+        window.onGfFormChange = async function() {
             const trackOpt = trackSelect.options[trackSelect.selectedIndex];
             const formId = document.getElementById('gfFormSelect').value;
             if (!formId) {
@@ -166,10 +175,33 @@
                 document.getElementById('gfSelectMsg').style.display = 'block';
                 return;
             }
+
+            const total = parseInt(trackOpt.dataset.students) || 0;
             document.getElementById('gfSelectMsg').style.display = 'none';
             document.getElementById('gfStats').style.display = 'block';
-            document.getElementById('gfResponseCount').textContent = '-';
-            document.getElementById('gfTotalStudents').textContent = (trackOpt.dataset.students || '-') + '명';
+            document.getElementById('gfResponseCount').textContent = '조회 중...';
+            document.getElementById('gfTotalStudents').textContent = total + '명';
+            document.getElementById('gfRate').textContent = '-';
+            document.getElementById('gfRateBar').style.width = '0%';
+
+            try {
+                const res  = await fetch(`/api/v1/admin/forms/${formId}/responses`);
+                const data = await res.json();
+                const count = data.data?.responseCount ?? -1;
+
+                if (count < 0) {
+                    document.getElementById('gfResponseCount').textContent = '연동 오류';
+                    document.getElementById('gfRate').textContent = 'credentials.json 확인 필요';
+                } else {
+                    document.getElementById('gfResponseCount').textContent = count + '건';
+                    const pct = total > 0 ? Math.min(100, Math.round(count / total * 100)) : 0;
+                    document.getElementById('gfRate').textContent = pct + '%  (' + count + ' / ' + total + '명)';
+                    document.getElementById('gfRateBar').style.width = pct + '%';
+                }
+            } catch (e) {
+                document.getElementById('gfResponseCount').textContent = '오류';
+                document.getElementById('gfRate').textContent = '서버 오류';
+            }
         };
     })();
 </script>

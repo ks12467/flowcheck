@@ -41,6 +41,10 @@ jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
 
+google:
+  sheets:
+    credentials-path: file:/app/config/credentials.json
+
 logging:
   level:
     root: INFO

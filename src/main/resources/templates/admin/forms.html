@@ -12,6 +12,19 @@
             <button class="btn btn-primary" onclick="openCreateModal()">+ 구글폼 등록</button>
         </div>
 
+        <!-- 서비스 계정 이메일 배너 -->
+        <div id="serviceAccountBanner" class="card" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span style="font-size:13px;color:var(--text-muted);">서비스 계정 이메일 (스프레드시트 공유 시 필요)</span>
+                <code id="serviceAccountEmail"
+                      style="font-size:13px;background:var(--bg);padding:4px 10px;border-radius:6px;color:var(--text);flex:1;min-width:0;word-break:break-all;"></code>
+                <button class="btn-copy" onclick="copyServiceEmail(this)">복사</button>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">
+                스프레드시트 등록 시 자동으로 공유를 시도합니다. 실패 시 위 이메일을 스프레드시트에 <strong>뷰어</strong>로 직접 추가해주세요.
+            </div>
+        </div>
+
         <div class="card">
             <div class="table-wrap">
                 <table>
@@ -125,6 +138,37 @@
 </div>
 
 <script>
+    // ── 서비스 계정 이메일 로드 ─────────────────────
+    async function loadServiceAccountEmail() {
+        try {
+            const res  = await fetch('/api/v1/admin/forms/service-account-email');
+            const data = await res.json();
+            const email = data.data?.email;
+            if (email) {
+                document.getElementById('serviceAccountEmail').textContent = email;
+                document.getElementById('serviceAccountBanner').style.display = 'block';
+            }
+        } catch (_) { /* 이메일 조회 실패 시 배너 미표시 */ }
+    }
+
+    function copyServiceEmail(btn) {
+        const email = document.getElementById('serviceAccountEmail').textContent;
+        try {
+            navigator.clipboard.writeText(email);
+        } catch (_) {
+            const ta = document.createElement('textarea');
+            ta.value = email;
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        btn.textContent = '복사됨!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+    }
+
     // ── 폼 목록 로드 ───────────────────────────────
     async function loadForms() {
         const res  = await fetch('/api/v1/admin/forms');
@@ -197,8 +241,11 @@
             body: JSON.stringify({name, trackId: parseInt(trackId), formUrl, spreadsheetId: spreadsheetId || null, scoreColumnHeader: scoreColumnHeader || null})
         });
         const data = await res.json();
-        if (res.ok) { closeModal('createModal'); await loadForms(); }
-        else { errEl.textContent = data.message || '등록에 실패했습니다.'; errEl.style.display = 'block'; }
+        if (res.ok) {
+            closeModal('createModal');
+            await loadForms();
+            if (spreadsheetId) showShareResult(data.data?.sharedWithServiceAccount, data.data?.serviceAccountEmail);
+        } else { errEl.textContent = data.message || '등록에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
     // ── 수정 ──────────────────────────────────────
@@ -233,8 +280,11 @@
             body: JSON.stringify({name, trackId: parseInt(trackId), formUrl, spreadsheetId: spreadsheetId || null, scoreColumnHeader: scoreColumnHeader || null})
         });
         const data = await res.json();
-        if (res.ok) { closeModal('editModal'); await loadForms(); }
-        else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
+        if (res.ok) {
+            closeModal('editModal');
+            await loadForms();
+            if (spreadsheetId) showShareResult(data.data?.sharedWithServiceAccount, data.data?.serviceAccountEmail);
+        } else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
     // ── 삭제 ──────────────────────────────────────
@@ -246,11 +296,30 @@
         else { alert(data.message || '삭제에 실패했습니다.'); }
     }
 
+    // ── 공유 결과 토스트 ───────────────────────────
+    function showShareResult(shared, email) {
+        const msg = shared
+            ? '스프레드시트에 서비스 계정을 뷰어로 자동 추가했습니다.'
+            : `자동 공유에 실패했습니다. 스프레드시트에 ${email || '서비스 계정 이메일'}을(를) 뷰어로 직접 추가해주세요.`;
+        const el = document.createElement('div');
+        el.textContent = msg;
+        el.style.cssText = `
+            position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+            background:${shared ? '#28A745' : '#DC3545'};color:#fff;
+            padding:12px 24px;border-radius:8px;font-size:13px;
+            box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;
+            max-width:480px;text-align:center;line-height:1.5;
+        `;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), shared ? 4000 : 8000);
+    }
+
     function esc(str) {
         return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     loadForms();
+    loadServiceAccountEmail();
 </script>
 </body>
 </html>

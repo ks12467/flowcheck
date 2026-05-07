@@ -58,10 +58,13 @@ jobs:
       # ── 8. EC2에서 컨테이너 재시작 ─────────────────────────────────────────
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GOOGLE_CREDS
           script: |
             # 이미지 로드
             docker load < ~/flowcheck.tar.gz
@@ -70,11 +73,15 @@ jobs:
             docker stop flowcheck || true
             docker rm   flowcheck || true
 
+            # credentials.json 복호화
+            echo "$GOOGLE_CREDS" | base64 -d > /home/ubuntu/credentials.json
+
             # 새 컨테이너 실행
             docker run -d \
               --name flowcheck \
               --restart unless-stopped \
               -p 8080:8080 \
+              -v /home/ubuntu/credentials.json:/app/config/credentials.json:ro \
               -e DB_HOST="${{ secrets.DB_HOST }}" \
               -e DB_NAME="${{ secrets.DB_NAME }}" \
               -e DB_USERNAME="${{ secrets.DB_USERNAME }}" \

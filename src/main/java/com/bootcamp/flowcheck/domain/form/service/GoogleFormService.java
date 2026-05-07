@@ -8,6 +8,7 @@ import com.bootcamp.flowcheck.domain.track.entity.Track;
 import com.bootcamp.flowcheck.domain.track.repository.TrackRepository;
 import com.bootcamp.flowcheck.global.exception.BusinessException;
 import com.bootcamp.flowcheck.global.exception.ErrorCode;
+import com.bootcamp.flowcheck.global.sheets.GoogleSheetsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class GoogleFormService {
 
     private final GoogleFormRepository googleFormRepository;
     private final TrackRepository trackRepository;
+    private final GoogleSheetsService googleSheetsService;
 
     @Transactional(readOnly = true)
     public List<GoogleFormResponse> getAllForms() {
@@ -58,5 +60,12 @@ public class GoogleFormService {
         GoogleForm form = googleFormRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GOOGLE_FORM_NOT_FOUND));
         form.softDelete();
+    }
+
+    @Transactional(readOnly = true)
+    public int getResponseCount(Long formId) {
+        GoogleForm form = googleFormRepository.findById(formId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GOOGLE_FORM_NOT_FOUND));
+        return googleSheetsService.getResponseCount(form.getSpreadsheetId());
     }
 }
