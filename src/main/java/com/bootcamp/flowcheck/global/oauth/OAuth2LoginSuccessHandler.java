@@ -35,6 +35,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             String email = oAuth2User.getAttribute("email");
             log.info("[OAuth2] 로그인 시도 email={}", email);
 
+            if (email == null) {
+                log.warn("[OAuth2] Google에서 이메일 정보를 가져오지 못했습니다.");
+                response.sendRedirect("/login?error=server");
+                return;
+            }
+
             Pm pm = pmRepository.findByEmail(email).orElse(null);
 
             if (pm == null) {
@@ -53,13 +59,21 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             cookie.setMaxAge((int) (expiration / 1000));
             response.addCookie(cookie);
 
-            // OAuth2 흐름에서 사용된 세션 무효화 (JWT로 인증 전환)
-            request.getSession().invalidate();
+            // 리다이렉트 전에 세션 무효화 (JWT로 인증 전환)
+            try {
+                request.getSession(false);  // 세션이 있을 때만
+                var session = request.getSession(false);
+                if (session != null) {
+                    session.invalidate();
+                }
+            } catch (Exception sessionEx) {
+                log.debug("[OAuth2] 세션 무효화 중 무시 가능한 오류: {}", sessionEx.getMessage());
+            }
 
             response.sendRedirect("/dashboard");
 
         } catch (Exception e) {
-            log.error("[OAuth2] 로그인 처리 중 오류 발생", e);
+            log.error("[OAuth2] 로그인 처리 중 오류 발생: {}", e.getMessage(), e);
             response.sendRedirect("/login?error=server");
         }
     }
