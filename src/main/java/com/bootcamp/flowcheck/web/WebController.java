@@ -18,6 +18,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,6 +33,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class WebController {
@@ -122,15 +124,21 @@ public class WebController {
         }
         model.addAttribute("conditionCounts", conditionCounts);
 
-        // 구글폼 현황
-        List<Map<String, Object>> googleForms = trackIds.isEmpty() ? List.of()
-                : googleFormRepository.findAllByTrackIdIn(trackIds).stream().map(f -> {
+        // 구글폼 현황 (테이블 미생성 등 DB 오류 시 빈 목록으로 fallback)
+        List<Map<String, Object>> googleForms = List.of();
+        try {
+            if (!trackIds.isEmpty()) {
+                googleForms = googleFormRepository.findAllByTrackIdIn(trackIds).stream().map(f -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("formId", f.getId());
                     m.put("name", f.getName());
                     m.put("trackId", f.getTrack().getId());
                     return m;
                 }).toList();
+            }
+        } catch (Exception e) {
+            log.warn("[Dashboard] 구글폼 조회 실패 (테이블 미생성 여부 확인 필요): {}", e.getMessage());
+        }
         model.addAttribute("googleForms", googleForms);
 
         int port = request.getServerPort();
