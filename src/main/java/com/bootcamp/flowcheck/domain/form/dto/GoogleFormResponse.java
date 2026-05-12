@@ -15,6 +15,8 @@ public class GoogleFormResponse {
     private String scoreColumnHeader;
     private Long trackId;
     private String trackName;
+    private Boolean shareResult;
+    private String serviceAccountEmail;
 
     public static GoogleFormResponse of(GoogleForm f) {
         return new GoogleFormResponse(
@@ -24,7 +26,23 @@ public class GoogleFormResponse {
                 f.getSpreadsheetId(),
                 f.getScoreColumnHeader(),
                 f.getTrack().getId(),
-                f.getTrack().getName()
+                f.getTrack().getName(),
+                null,
+                null
+        );
+    }
+
+    public static GoogleFormResponse ofWithShare(GoogleForm f, Boolean shareResult, String serviceAccountEmail) {
+        return new GoogleFormResponse(
+                f.getId(),
+                f.getName(),
+                f.getFormUrl(),
+                f.getSpreadsheetId(),
+                f.getScoreColumnHeader(),
+                f.getTrack().getId(),
+                f.getTrack().getName(),
+                shareResult,
+                serviceAccountEmail
         );
     }
 }

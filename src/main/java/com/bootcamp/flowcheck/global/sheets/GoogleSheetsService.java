@@ -42,6 +42,9 @@ public class GoogleSheetsService {
     // 캐시: spreadsheetId → [responseCount, expiresAtMillis]
     private final Map<String, long[]> cache = new ConcurrentHashMap<>();
 
+    // 캐시: "spreadsheetId\0scoreColumnHeader" → [averageScore*1000, expiresAtMillis]
+    private final Map<String, long[]> scoreCache = new ConcurrentHashMap<>();
+
     @PostConstruct
     public void init() {
         try {
@@ -150,8 +153,88 @@ public class GoogleSheetsService {
         }
     }
 
+    /**
+     * 스프레드시트의 특정 컬럼 평균 점수를 반환합니다 (소수점 1자리, 헤더명으로 컬럼 탐색).
+     *
+     * @return 평균 점수 (≥ 0), 컬럼 미발견 또는 오류 시 -1
+     */
+    public double getAverageScore(String spreadsheetId, String scoreColumnHeader) {
+        if (sheetsClient == null
+                || spreadsheetId == null || spreadsheetId.isBlank()
+                || scoreColumnHeader == null || scoreColumnHeader.isBlank()) {
+            return -1;
+        }
+
+        String cacheKey = spreadsheetId + "\0" + scoreColumnHeader;
+        long[] cached = scoreCache.get(cacheKey);
+        if (cached != null && System.currentTimeMillis() < cached[1]) {
+            log.debug("[Sheets] 점수 캐시 히트: key={}, avg={}", cacheKey, cached[0] / 1000.0);
+            return cached[0] / 1000.0;
+        }
+
+        try {
+            // 1행에서 헤더 컬럼 인덱스 탐색
+            ValueRange headerRow = sheetsClient.spreadsheets().values()
+                    .get(spreadsheetId, "1:1").execute();
+            List<List<Object>> headerValues = headerRow.getValues();
+            if (headerValues == null || headerValues.isEmpty()) return -1;
+
+            List<Object> headers = headerValues.get(0);
+            int colIndex = -1;
+            for (int i = 0; i < headers.size(); i++) {
+                if (scoreColumnHeader.trim().equalsIgnoreCase(String.valueOf(headers.get(i)).trim())) {
+                    colIndex = i;
+                    break;
+                }
+            }
+            if (colIndex < 0) {
+                log.warn("[Sheets] 헤더 '{}' 를 찾을 수 없습니다: spreadsheetId={}", scoreColumnHeader, spreadsheetId);
+                return -1;
+            }
+
+            // 해당 컬럼 전체 데이터 읽기 (2행부터)
+            String colLetter = columnIndexToLetter(colIndex);
+            ValueRange colData = sheetsClient.spreadsheets().values()
+                    .get(spreadsheetId, colLetter + "2:" + colLetter).execute();
+            List<List<Object>> rows = colData.getValues();
+            if (rows == null || rows.isEmpty()) return 0;
+
+            double sum = 0;
+            int cnt = 0;
+            for (List<Object> row : rows) {
+                if (row.isEmpty()) continue;
+                try {
+                    sum += Double.parseDouble(String.valueOf(row.get(0)).trim());
+                    cnt++;
+                } catch (NumberFormatException ignored) {}
+            }
+
+            double avg = cnt > 0 ? Math.round(sum / cnt * 10.0) / 10.0 : 0;
+            scoreCache.put(cacheKey, new long[]{Math.round(avg * 1000), System.currentTimeMillis() + CACHE_TTL_MS});
+            log.info("[Sheets] 평균 점수 조회: spreadsheetId={}, col={}, avg={}", spreadsheetId, colLetter, avg);
+            return avg;
+
+        } catch (Exception e) {
+            log.error("[Sheets] 평균 점수 조회 실패: spreadsheetId={}, error={}", spreadsheetId, e.getMessage());
+            return -1;
+        }
+    }
+
     /** 특정 스프레드시트의 캐시를 강제 무효화합니다. */
     public void invalidateCache(String spreadsheetId) {
         cache.remove(spreadsheetId);
+        scoreCache.entrySet().removeIf(e -> e.getKey().startsWith(spreadsheetId + "\0"));
+    }
+
+    /** 0-based 컬럼 인덱스를 Sheets 컬럼 문자로 변환합니다 (0→A, 26→AA 등). */
+    private static String columnIndexToLetter(int colIndex) {
+        StringBuilder sb = new StringBuilder();
+        int n = colIndex + 1;
+        while (n > 0) {
+            n--;
+            sb.insert(0, (char) ('A' + n % 26));
+            n /= 26;
+        }
+        return sb.toString();
     }
 }

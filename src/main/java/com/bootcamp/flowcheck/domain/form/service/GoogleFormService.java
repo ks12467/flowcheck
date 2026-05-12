@@ -43,7 +43,15 @@ public class GoogleFormService {
                 .track(track)
                 .createdAt(LocalDateTime.now())
                 .build();
-        return GoogleFormResponse.of(googleFormRepository.save(form));
+        GoogleForm saved = googleFormRepository.save(form);
+
+        Boolean shareResult = null;
+        String serviceAccountEmail = null;
+        if (req.getSpreadsheetId() != null && !req.getSpreadsheetId().isBlank()) {
+            serviceAccountEmail = googleSheetsService.getServiceAccountEmail();
+            shareResult = googleSheetsService.shareSpreadsheetWithServiceAccount(req.getSpreadsheetId());
+        }
+        return GoogleFormResponse.ofWithShare(saved, shareResult, serviceAccountEmail);
     }
 
     public GoogleFormResponse updateForm(Long id, GoogleFormRequest req) {
@@ -53,7 +61,14 @@ public class GoogleFormService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
         form.update(req.getName(), req.getFormUrl(), req.getSpreadsheetId(),
                 req.getScoreColumnHeader(), track);
-        return GoogleFormResponse.of(form);
+
+        Boolean shareResult = null;
+        String serviceAccountEmail = null;
+        if (req.getSpreadsheetId() != null && !req.getSpreadsheetId().isBlank()) {
+            serviceAccountEmail = googleSheetsService.getServiceAccountEmail();
+            shareResult = googleSheetsService.shareSpreadsheetWithServiceAccount(req.getSpreadsheetId());
+        }
+        return GoogleFormResponse.ofWithShare(form, shareResult, serviceAccountEmail);
     }
 
     public void deleteForm(Long id) {
@@ -67,5 +82,13 @@ public class GoogleFormService {
         GoogleForm form = googleFormRepository.findById(formId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GOOGLE_FORM_NOT_FOUND));
         return googleSheetsService.getResponseCount(form.getSpreadsheetId());
+    }
+
+    @Transactional(readOnly = true)
+    public double getAverageScore(Long formId) {
+        GoogleForm form = googleFormRepository.findById(formId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GOOGLE_FORM_NOT_FOUND));
+        if (form.getSpreadsheetId() == null || form.getScoreColumnHeader() == null) return -1;
+        return googleSheetsService.getAverageScore(form.getSpreadsheetId(), form.getScoreColumnHeader());
     }
 }

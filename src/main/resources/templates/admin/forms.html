@@ -78,7 +78,19 @@
         </div>
         <div class="form-group">
             <label class="form-label">스프레드시트 ID</label>
-            <input class="form-control" type="text" id="createSpreadsheetId" placeholder="Google Sheets ID">
+            <input class="form-control" type="text" id="createSpreadsheetId" placeholder="Google Sheets ID"
+                   oninput="updateShareGuide('create')">
+        </div>
+        <div id="createShareGuide" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;">
+            <div style="color:var(--text-muted);margin-bottom:8px;">
+                ⚠️ 응답 수를 읽으려면 아래 이메일을 스프레드시트에 <strong>뷰어</strong>로 공유해주세요.
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <code id="createGuideEmail" style="flex:1;min-width:0;word-break:break-all;background:#fff;padding:4px 8px;border-radius:4px;border:1px solid var(--border);font-size:12px;"></code>
+                <button type="button" class="btn-copy" onclick="copyGuideEmail('create', this)">복사</button>
+                <button type="button" class="btn btn-outline" id="createOpenSheetBtn" style="padding:4px 12px;font-size:12px;"
+                        onclick="openSpreadsheet('createSpreadsheetId')">스프레드시트 열기 →</button>
+            </div>
         </div>
         <div class="form-group">
             <label class="form-label">만족도 점수 컬럼 헤더명</label>
@@ -122,7 +134,19 @@
         </div>
         <div class="form-group">
             <label class="form-label">스프레드시트 ID</label>
-            <input class="form-control" type="text" id="editSpreadsheetId">
+            <input class="form-control" type="text" id="editSpreadsheetId"
+                   oninput="updateShareGuide('edit')">
+        </div>
+        <div id="editShareGuide" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;">
+            <div style="color:var(--text-muted);margin-bottom:8px;">
+                ⚠️ 응답 수를 읽으려면 아래 이메일을 스프레드시트에 <strong>뷰어</strong>로 공유해주세요.
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <code id="editGuideEmail" style="flex:1;min-width:0;word-break:break-all;background:#fff;padding:4px 8px;border-radius:4px;border:1px solid var(--border);font-size:12px;"></code>
+                <button type="button" class="btn-copy" onclick="copyGuideEmail('edit', this)">복사</button>
+                <button type="button" class="btn btn-outline" id="editOpenSheetBtn" style="padding:4px 12px;font-size:12px;"
+                        onclick="openSpreadsheet('editSpreadsheetId')">스프레드시트 열기 →</button>
+            </div>
         </div>
         <div class="form-group">
             <label class="form-label">만족도 점수 컬럼 헤더명</label>
@@ -138,26 +162,45 @@
 </div>
 
 <script>
-    // ── 서비스 계정 이메일 로드 ─────────────────────
+    // ── 서비스 계정 이메일 (전역) ──────────────────
+    let _serviceAccountEmail = '';
+
     async function loadServiceAccountEmail() {
         try {
             const res  = await fetch('/api/v1/admin/forms/service-account-email');
             const data = await res.json();
             const email = data.data?.email;
             if (email) {
+                _serviceAccountEmail = email;
                 document.getElementById('serviceAccountEmail').textContent = email;
                 document.getElementById('serviceAccountBanner').style.display = 'block';
+                // 모달 안내 이메일 초기 세팅
+                document.getElementById('createGuideEmail').textContent = email;
+                document.getElementById('editGuideEmail').textContent = email;
             }
         } catch (_) { /* 이메일 조회 실패 시 배너 미표시 */ }
     }
 
-    function copyServiceEmail(btn) {
-        const email = document.getElementById('serviceAccountEmail').textContent;
+    // 스프레드시트 ID 입력 시 공유 안내 표시/숨김
+    function updateShareGuide(prefix) {
+        const id  = document.getElementById(prefix + 'SpreadsheetId').value.trim();
+        const box = document.getElementById(prefix + 'ShareGuide');
+        box.style.display = (id && _serviceAccountEmail) ? 'block' : 'none';
+    }
+
+    // 스프레드시트를 새 탭에서 열기
+    function openSpreadsheet(inputId) {
+        const id = document.getElementById(inputId).value.trim();
+        if (!id) return;
+        window.open('https://docs.google.com/spreadsheets/d/' + encodeURIComponent(id), '_blank', 'noopener');
+    }
+
+    function copyText(text, btn) {
         try {
-            navigator.clipboard.writeText(email);
+            navigator.clipboard.writeText(text);
         } catch (_) {
             const ta = document.createElement('textarea');
-            ta.value = email;
+            ta.value = text;
             ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
             document.body.appendChild(ta);
             ta.focus(); ta.select();
@@ -167,6 +210,14 @@
         btn.textContent = '복사됨!';
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+    }
+
+    function copyServiceEmail(btn) {
+        copyText(document.getElementById('serviceAccountEmail').textContent, btn);
+    }
+
+    function copyGuideEmail(prefix, btn) {
+        copyText(_serviceAccountEmail, btn);
     }
 
     // ── 폼 목록 로드 ───────────────────────────────
@@ -219,6 +270,7 @@
         document.getElementById('createSpreadsheetId').value = '';
         document.getElementById('createScoreColumnHeader').value = '';
         document.getElementById('createError').style.display = 'none';
+        document.getElementById('createShareGuide').style.display = 'none';
         document.getElementById('createModal').classList.add('open');
     }
 
@@ -244,7 +296,7 @@
         if (res.ok) {
             closeModal('createModal');
             await loadForms();
-            if (spreadsheetId) showShareResult(data.data?.sharedWithServiceAccount, data.data?.serviceAccountEmail);
+            if (spreadsheetId) showShareResult(data.data?.shareResult, data.data?.serviceAccountEmail, spreadsheetId);
         } else { errEl.textContent = data.message || '등록에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
@@ -257,6 +309,9 @@
         document.getElementById('editSpreadsheetId').value = spreadsheetId;
         document.getElementById('editScoreColumnHeader').value = scoreColumnHeader;
         document.getElementById('editError').style.display = 'none';
+        // 스프레드시트 ID가 있으면 공유 안내 즉시 표시
+        const guide = document.getElementById('editShareGuide');
+        guide.style.display = (spreadsheetId && _serviceAccountEmail) ? 'block' : 'none';
         document.getElementById('editModal').classList.add('open');
     }
 
@@ -283,7 +338,7 @@
         if (res.ok) {
             closeModal('editModal');
             await loadForms();
-            if (spreadsheetId) showShareResult(data.data?.sharedWithServiceAccount, data.data?.serviceAccountEmail);
+            if (spreadsheetId) showShareResult(data.data?.shareResult, data.data?.serviceAccountEmail, spreadsheetId);
         } else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
@@ -296,22 +351,57 @@
         else { alert(data.message || '삭제에 실패했습니다.'); }
     }
 
-    // ── 공유 결과 토스트 ───────────────────────────
-    function showShareResult(shared, email) {
-        const msg = shared
-            ? '스프레드시트에 서비스 계정을 뷰어로 자동 추가했습니다.'
-            : `자동 공유에 실패했습니다. 스프레드시트에 ${email || '서비스 계정 이메일'}을(를) 뷰어로 직접 추가해주세요.`;
+    // ── 공유 결과 알림 ─────────────────────────────
+    function showShareResult(shareResult, email, spreadsheetId) {
         const el = document.createElement('div');
-        el.textContent = msg;
-        el.style.cssText = `
-            position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-            background:${shared ? '#28A745' : '#DC3545'};color:#fff;
-            padding:12px 24px;border-radius:8px;font-size:13px;
-            box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:9999;
-            max-width:480px;text-align:center;line-height:1.5;
-        `;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), shared ? 4000 : 8000);
+
+        if (shareResult === true) {
+            el.style.cssText = `
+                position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+                background:#28A745;color:#fff;
+                padding:14px 20px;border-radius:10px;font-size:13px;
+                box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:9999;
+                max-width:520px;width:calc(100% - 48px);line-height:1.6;
+            `;
+            el.textContent = '✅ 스프레드시트 공유 완료! 응답 수 조회가 가능합니다.';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 4000);
+        } else {
+            const displayEmail = email || _serviceAccountEmail || '서비스 계정 이메일';
+            el.style.cssText = `
+                position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+                background:#856404;color:#fff3cd;border:1px solid #ffc107;
+                padding:14px 20px;border-radius:10px;font-size:13px;
+                box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:9999;
+                max-width:520px;width:calc(100% - 48px);line-height:1.6;
+            `;
+            el.innerHTML = `
+                <div style="font-weight:600;margin-bottom:8px;color:#fff3cd;">⚠️ 자동 공유 실패</div>
+                <div style="font-size:12px;margin-bottom:10px;color:#fff3cd;">
+                    아래 이메일을 스프레드시트에 <strong>뷰어</strong>로 수동 추가해주세요.
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                    <code id="shareToastEmail" style="flex:1;min-width:0;word-break:break-all;background:rgba(0,0,0,.2);
+                          padding:4px 8px;border-radius:4px;font-size:12px;color:#fff3cd;">${esc(displayEmail)}</code>
+                    <button onclick="copyToastEmail(this)" style="border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff3cd;
+                            padding:3px 10px;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap;">복사</button>
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    ${spreadsheetId ? `<button onclick="window.open('https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}','_blank','noopener');this.closest('[style]').remove();"
+                            style="border:none;background:rgba(0,0,0,.2);color:#fff3cd;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;">
+                            스프레드시트 열기 →</button>` : ''}
+                    <button onclick="this.closest('[style]').remove();"
+                            style="border:none;background:rgba(0,0,0,.15);color:#fff3cd;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;">닫기</button>
+                </div>
+            `;
+            document.body.appendChild(el);
+            // 15초 후 자동 닫힘
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 15000);
+        }
+    }
+
+    function copyToastEmail(btn) {
+        copyText(document.getElementById('shareToastEmail').textContent, btn);
     }
 
     function esc(str) {

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('NPS 분석')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <h1 class="page-title" style="margin-bottom:0">NPS 다면평가 분석</h1>
+        </div>
+
+        <!-- ── 업로드 카드 ──────────────────────────── -->
+        <div class="card">
+            <div class="card-title">📤 데이터 업로드</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;min-width:200px;">
+                    <label class="form-label">트랙 선택</label>
+                    <select class="form-control" id="trackSelect" onchange="onTrackChange()">
+                        <option value="">트랙을 선택하세요</option>
+                        <option th:each="t : ${allTracks}" th:value="${t.id}" th:text="${t.name}">트랙명</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;min-width:160px;">
+                    <label class="form-label">업로드 이름 <span style="color:var(--danger);">*</span></label>
+                    <input class="form-control" type="text" id="uploadName" placeholder="예: 1차, 2차, 중간점검" maxlength="50">
+                </div>
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:240px;">
+                    <label class="form-label">엑셀 파일 <span style="color:var(--text-muted);font-weight:400;">(.xlsx)</span></label>
+                    <input class="form-control" type="file" id="npsFile" accept=".xlsx">
+                </div>
+                <button class="btn btn-primary" onclick="uploadNps()" id="uploadBtn"
+                        style="white-space:nowrap;flex-shrink:0;">업로드</button>
+            </div>
+            <div id="uploadMsg" style="margin-top:10px;font-size:13px;display:none;"></div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+                컬럼 순서: 이름 · 반 · 주특기 · 난이도 · 실력 · 성장 · 소통 · 몰입 · 운영 만족도 · (코멘트) · 커리큘럼 만족도 · (코멘트) · NPS · (코멘트)
+            </div>
+        </div>
+
+        <!-- ── 업로드 탭 ──────────────────────────────── -->
+        <div id="tabSection" style="display:none;margin-bottom:0;">
+            <div id="uploadTabs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:0 0 0 2px;border-bottom:2px solid var(--border);margin-bottom:20px;"></div>
+        </div>
+
+        <!-- ── 삭제 확인 모달 ────────────────────────── -->
+        <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:var(--radius);padding:28px 28px 20px;min-width:320px;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+                <div style="font-size:15px;font-weight:600;margin-bottom:8px;">업로드 삭제</div>
+                <div id="deleteModalMsg" style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;"></div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;">
+                    <button class="btn btn-secondary" onclick="closeDeleteModal()">취소</button>
+                    <button class="btn btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 분석 결과 ──────────────────────────────── -->
+        <div id="analysisSection" style="display:none;">
+
+            <!-- NPS 지수 + 요약 -->
+            <div class="grid-2" style="gap:16px;margin-bottom:20px;">
+                <!-- NPS 지수 -->
+                <div class="card" style="margin-bottom:0;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:140px;">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase;">NPS 지수</div>
+                    <div id="npsScoreVal" style="font-size:64px;font-weight:800;line-height:1;">-</div>
+                    <div id="npsLabel" style="font-size:13px;font-weight:600;margin-top:6px;"></div>
+                    <div id="npsSubtitle" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+                </div>
+                <!-- NPS 분포 -->
+                <div class="card" style="margin-bottom:0;">
+                    <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:14px;">NPS 분포</div>
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+                            <span style="color:var(--success);font-weight:600;">👍 추천 (9~10)</span>
+                            <span id="promoterStat" style="font-weight:600;color:var(--success);">-</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="promoterBar" class="progress-bar-fill" style="width:0%;background:var(--success);transition:width .6s;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+                            <span style="color:var(--caution);font-weight:600;">😐 중립 (7~8)</span>
+                            <span id="passiveStat" style="font-weight:600;color:var(--caution);">-</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="passiveBar" class="progress-bar-fill" style="width:0%;background:var(--caution);transition:width .6s;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
+                            <span style="color:var(--danger);font-weight:600;">👎 비추천 (0~6)</span>
+                            <span id="detractorStat" style="font-weight:600;color:var(--danger);">-</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="detractorBar" class="progress-bar-fill" style="width:0%;background:var(--danger);transition:width .6s;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 항목별 평균 -->
+            <div class="card">
+                <div class="card-title">📊 항목별 평균</div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;" id="avgGrid" class="nps-avg-grid"></div>
+            </div>
+
+            <!-- 상승/하락 인원 테이블 -->
+            <div class="grid-2" style="gap:16px;margin-bottom:20px;">
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title" style="color:var(--success);">👍 추천 인원 <span id="promoterCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>이름</th><th style="text-align:center;">NPS</th></tr>
+                            </thead>
+                            <tbody id="promoterTable">
+                                <tr><td colspan="2" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title" style="color:var(--danger);">👎 비추천 인원 <span id="detractorCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>이름</th><th style="text-align:center;">NPS</th></tr>
+                            </thead>
+                            <tbody id="detractorTable">
+                                <tr><td colspan="2" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6점 이하 수강생 -->
+            <div class="card">
+                <div class="card-title" style="color:var(--warning);">⚠️ 6점 이하 수강생 <span id="lowScoreCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th style="width:140px;">이름</th><th>해당 항목 (점수)</th></tr>
+                        </thead>
+                        <tbody id="lowScoreTable">
+                            <tr><td colspan="2" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 데이터 없음 안내 -->
+        <div id="noDataMsg" class="card" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
+            선택한 트랙의 NPS 데이터가 없습니다. 위에서 엑셀 파일을 업로드해주세요.
+        </div>
+    </main>
+</div>
+
+<style>
+    /* NPS 항목 평균 카드 */
+    .nps-avg-card {
+        text-align: center;
+        padding: 12px 8px;
+        border-radius: var(--radius);
+        border: 1.5px solid var(--border);
+    }
+    .nps-avg-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+    .nps-avg-score { font-size: 26px; font-weight: 700; line-height: 1; }
+    /* 점수별 색상 */
+    .score-good   { color: var(--success); }
+    .score-ok     { color: var(--warning); }
+    .score-low    { color: var(--danger); }
+    /* 업로드 탭 */
+    .tab-wrapper {
+        display: flex;
+        align-items: stretch;
+        border: 1.5px solid var(--border);
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        margin-bottom: -2px;
+        background: var(--bg);
+        transition: background .15s;
+    }
+    .tab-wrapper:hover { background: var(--bg-card); }
+    .tab-wrapper.active {
+        background: var(--bg-card);
+        border-color: var(--primary);
+        border-bottom-color: var(--bg-card);
+    }
+    .upload-tab {
+        padding: 7px 14px 7px 16px;
+        border: none;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-muted);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .tab-wrapper:hover .upload-tab { color: var(--primary); }
+    .tab-wrapper.active .upload-tab { color: var(--primary); font-weight: 600; }
+    .tab-actions {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 6px 0 0;
+        position: relative;
+        z-index: 1;
+    }
+    .tab-action-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 3px 4px;
+        border-radius: 4px;
+        font-size: 13px;
+        line-height: 1;
+        color: var(--text-muted);
+        opacity: 0;
+        pointer-events: auto;
+        transition: opacity .15s, background .15s;
+    }
+    .tab-wrapper:hover .tab-action-btn,
+    .tab-wrapper.active .tab-action-btn { opacity: 1; }
+    .tab-action-btn:hover { background: var(--border); color: var(--text); }
+    /* 인라인 편집 탭 */
+    .tab-edit-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border: 1.5px solid var(--primary);
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        margin-bottom: -2px;
+        background: var(--bg-card);
+    }
+    .tab-edit-input {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 3px 8px;
+        font-size: 13px;
+        width: 130px;
+        outline: none;
+    }
+    .tab-edit-input:focus { border-color: var(--primary); }
+    .tab-edit-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 2px 4px;
+        border-radius: 4px;
+        line-height: 1;
+    }
+    .tab-edit-btn:hover { background: var(--border); }
+    /* 반응형: 3열 이하 */
+    @media (max-width: 900px) {
+        #avgGrid { grid-template-columns: repeat(4, 1fr) !important; }
+    }
+    @media (max-width: 600px) {
+        #avgGrid { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+</style>
+
+<script>
+    const AVG_ITEMS = [
+        { key: 'avgDifficulty',            label: '난이도' },
+        { key: 'avgSkill',                 label: '실력' },
+        { key: 'avgGrowth',                label: '성장' },
+        { key: 'avgCommunication',         label: '소통' },
+        { key: 'avgImmersion',             label: '몰입' },
+        { key: 'avgOpsSatisfaction',       label: '운영 만족도' },
+        { key: 'avgCurriculumSatisfaction',label: '커리큘럼 만족도' },
+    ];
+
+    let activeUploadName = null;
+    let pendingDeleteName = null;
+
+    // ── 트랙 변경 시 탭 목록 로드 ────────────────────
+    async function onTrackChange() {
+        const trackId = document.getElementById('trackSelect').value;
+        clearAnalysis();
+        document.getElementById('tabSection').style.display = 'none';
+        document.getElementById('uploadTabs').innerHTML = '';
+        activeUploadName = null;
+
+        if (!trackId) return;
+        await loadTabs(trackId);
+    }
+
+    async function loadTabs(trackId, selectName) {
+        try {
+            const res   = await fetch(`/api/v1/admin/nps/uploads?trackId=${trackId}`);
+            const data  = await res.json();
+            // 빈 문자열·null 업로드명 제외 (DB 마이그레이션 시 빈 값으로 채워진 행 방어)
+            const names = (data.data || []).filter(n => n != null && n !== '');
+            renderTabs(trackId, names, selectName);
+        } catch (e) {
+            console.error('탭 로드 실패', e);
+        }
+    }
+
+    function renderTabs(trackId, names, selectName) {
+        const tabSection = document.getElementById('tabSection');
+        const tabsEl     = document.getElementById('uploadTabs');
+        tabsEl.innerHTML = '';
+
+        if (names.length === 0) {
+            tabSection.style.display = 'none';
+            clearAnalysis();
+            return;
+        }
+
+        tabSection.style.display = 'block';
+        names.forEach(name => tabsEl.appendChild(buildTabEl(trackId, name)));
+
+        const target = selectName && names.includes(selectName) ? selectName : names[0];
+        selectTab(trackId, target);
+    }
+
+    function buildTabEl(trackId, name) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tab-wrapper';
+        wrapper.dataset.name = name;
+
+        const btn = document.createElement('button');
+        btn.className = 'upload-tab';
+        btn.textContent = name;
+        btn.addEventListener('click', () => selectTab(trackId, name));
+
+        const actions = document.createElement('div');
+        actions.className = 'tab-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'tab-action-btn';
+        editBtn.title = '이름 수정';
+        editBtn.textContent = '✏️';
+        editBtn.addEventListener('click', e => { e.stopPropagation(); startRename(trackId, name, wrapper); });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'tab-action-btn';
+        delBtn.title = '삭제';
+        delBtn.textContent = '🗑️';
+        delBtn.addEventListener('click', e => { e.stopPropagation(); openDeleteModal(trackId, name); });
+
+        actions.append(editBtn, delBtn);
+        wrapper.append(btn, actions);
+        return wrapper;
+    }
+
+    function selectTab(trackId, uploadName) {
+        if (!uploadName) return;   // 빈 문자열·null·undefined 방어
+        activeUploadName = uploadName;
+        document.querySelectorAll('.tab-wrapper').forEach(w => {
+            w.classList.toggle('active', w.dataset.name === uploadName);
+        });
+        loadAnalysis(trackId, uploadName);
+    }
+
+    // ── 인라인 이름 수정 ──────────────────────────────
+    function startRename(trackId, name, wrapper) {
+        // 이미 편집 중이면 무시
+        if (wrapper.classList.contains('editing')) return;
+        wrapper.classList.add('editing');
+        wrapper.innerHTML = '';
+        wrapper.className = 'tab-edit-wrapper';
+
+        const input = document.createElement('input');
+        input.className = 'tab-edit-input';
+        input.value = name;
+        input.maxLength = 50;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'tab-edit-btn';
+        confirmBtn.title = '확인';
+        confirmBtn.textContent = '✔';
+        confirmBtn.style.color = 'var(--success)';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'tab-edit-btn';
+        cancelBtn.title = '취소';
+        cancelBtn.textContent = '✕';
+        cancelBtn.style.color = 'var(--danger)';
+
+        const doRename = async () => {
+            const newName = input.value.trim();
+            if (!newName) { input.focus(); return; }
+            if (newName === name) { cancelRename(trackId, name, wrapper); return; }
+            confirmBtn.disabled = cancelBtn.disabled = true;
+            try {
+                const res  = await fetch(
+                    `/api/v1/admin/nps/upload-name?trackId=${trackId}&oldName=${encodeURIComponent(name)}&newName=${encodeURIComponent(newName)}`,
+                    { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    await loadTabs(trackId, newName);
+                } else {
+                    alert(data.message || '이름 변경에 실패했습니다.');
+                    cancelRename(trackId, name, wrapper);
+                }
+            } catch (e) {
+                alert('서버 오류가 발생했습니다.');
+                cancelRename(trackId, name, wrapper);
+            }
+        };
+
+        confirmBtn.addEventListener('click', doRename);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doRename();
+            if (e.key === 'Escape') cancelRename(trackId, name, wrapper);
+        });
+        cancelBtn.addEventListener('click', () => cancelRename(trackId, name, wrapper));
+
+        wrapper.append(input, confirmBtn, cancelBtn);
+        input.focus();
+        input.select();
+    }
+
+    function cancelRename(trackId, name, wrapper) {
+        const tabsEl = document.getElementById('uploadTabs');
+        const idx    = [...tabsEl.children].indexOf(wrapper);
+        const newEl  = buildTabEl(trackId, name);
+        tabsEl.replaceChild(newEl, wrapper);
+        if (activeUploadName === name) newEl.classList.add('active');
+    }
+
+    // ── 삭제 모달 ─────────────────────────────────────
+    let pendingDeleteTrackId = null;
+    let modalJustOpened = false;
+
+    function openDeleteModal(trackId, name) {
+        pendingDeleteTrackId = trackId;
+        pendingDeleteName    = name;
+        document.getElementById('deleteModalMsg').innerHTML =
+            `'<strong>${esc(name)}</strong>' 데이터를 삭제하시겠습니까?<br><span style="font-size:12px;color:var(--danger);">삭제된 데이터는 복구할 수 없습니다.</span>`;
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'flex';
+        // 모달이 열린 직후 동일 이벤트 버블링으로 backdrop 클릭이 즉시 실행되지 않도록 방지
+        modalJustOpened = true;
+        setTimeout(() => { modalJustOpened = false; }, 0);
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        pendingDeleteTrackId = pendingDeleteName = null;
+        modalJustOpened = false;
+    }
+
+    async function confirmDelete() {
+        // !pendingDeleteName은 빈 문자열("")도 true로 평가해 조기 종료되므로 null 체크로 교체
+        if (pendingDeleteTrackId == null || pendingDeleteName == null) return;
+        const trackId    = pendingDeleteTrackId;
+        const uploadName = pendingDeleteName;
+        const btn = document.getElementById('deleteConfirmBtn');
+        btn.disabled = true;
+        btn.textContent = '삭제 중…';
+
+        try {
+            const res  = await fetch(
+                `/api/v1/admin/nps/upload?trackId=${trackId}&uploadName=${encodeURIComponent(uploadName)}`,
+                { method: 'DELETE' });
+            const data = await res.json();
+            closeDeleteModal();
+            if (res.ok) {
+                await loadTabs(trackId); // 첫 탭 자동 선택 or 빈 상태
+            } else {
+                alert(data.message || '삭제에 실패했습니다.');
+            }
+        } catch (e) {
+            alert('서버 오류가 발생했습니다.');
+            closeDeleteModal();
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '삭제';
+        }
+    }
+
+    // 모달 바깥 클릭 시 닫기 (openDeleteModal 직후 동일 이벤트 버블링은 무시)
+    document.getElementById('deleteModal').addEventListener('click', e => {
+        if (modalJustOpened) return;
+        if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+    });
+
+    // ── 업로드 ────────────────────────────────────────
+    async function uploadNps() {
+        const trackId    = document.getElementById('trackSelect').value;
+        const uploadName = document.getElementById('uploadName').value.trim();
+        const file       = document.getElementById('npsFile').files[0];
+        const btn        = document.getElementById('uploadBtn');
+
+        document.getElementById('uploadMsg').style.display = 'none';
+
+        if (!trackId)    { showUploadMsg('트랙을 선택해주세요.', false); return; }
+        if (!uploadName) { showUploadMsg('업로드 이름을 입력해주세요.', false); return; }
+        if (!file)       { showUploadMsg('파일을 선택해주세요.', false); return; }
+        if (!file.name.toLowerCase().endsWith('.xlsx')) {
+            showUploadMsg('.xlsx 파일만 업로드 가능합니다.', false); return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '업로드 중…';
+
+        const formData = new FormData();
+        formData.append('trackId', trackId);
+        formData.append('uploadName', uploadName);
+        formData.append('file', file);
+
+        try {
+            const res  = await fetch('/api/v1/admin/nps/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                showUploadMsg('✅ ' + data.message, true);
+                await loadTabs(trackId, uploadName);
+            } else {
+                showUploadMsg('❌ ' + (data.message || '업로드 실패'), false);
+            }
+        } catch (e) {
+            showUploadMsg('❌ 서버 오류가 발생했습니다.', false);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '업로드';
+        }
+    }
+
+    function showUploadMsg(msg, ok) {
+        const el = document.getElementById('uploadMsg');
+        el.textContent = msg;
+        el.style.color = ok ? 'var(--success)' : 'var(--danger)';
+        el.style.display = 'block';
+    }
+
+    // ── 분석 로드 ─────────────────────────────────────
+    async function loadAnalysis(trackId, uploadName) {
+        clearAnalysis();
+        try {
+            const res  = await fetch(`/api/v1/admin/nps/analysis?trackId=${trackId}&uploadName=${encodeURIComponent(uploadName)}`);
+            const data = await res.json();
+            if (res.ok && data.data) {
+                renderAnalysis(data.data);
+            }
+        } catch (e) {
+            console.error('분석 로드 실패', e);
+        }
+    }
+
+    function renderAnalysis(d) {
+        document.getElementById('noDataMsg').style.display = 'none';
+
+        if (!d.hasData) {
+            document.getElementById('analysisSection').style.display = 'none';
+            document.getElementById('noDataMsg').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('analysisSection').style.display = 'block';
+
+        // ── NPS 지수 ────────────────────────────────
+        const score    = d.npsScore;
+        const scoreEl  = document.getElementById('npsScoreVal');
+        scoreEl.textContent = (score > 0 ? '+' : '') + score.toFixed(1);
+        scoreEl.style.color = score > 0 ? 'var(--success)' : score < 0 ? 'var(--danger)' : 'var(--text-muted)';
+
+        const label = score >= 50 ? '우수' : score >= 20 ? '양호' : score >= 0 ? '보통' : '개선 필요';
+        document.getElementById('npsLabel').textContent = label;
+        document.getElementById('npsLabel').style.color = score >= 20 ? 'var(--success)' : score >= 0 ? 'var(--warning)' : 'var(--danger)';
+        document.getElementById('npsSubtitle').textContent =
+            `총 ${d.totalCount}명 · 추천 ${d.promoters}명 · 중립 ${d.passives}명 · 비추천 ${d.detractors}명`;
+
+        // ── NPS 분포 바 ──────────────────────────────
+        setBar('promoter', d.promoters, d.promoterPct);
+        setBar('passive',  d.passives,  d.passivePct);
+        setBar('detractor',d.detractors,d.detractorPct);
+
+        // ── 항목별 평균 카드 ─────────────────────────
+        const grid = document.getElementById('avgGrid');
+        grid.innerHTML = AVG_ITEMS.map(item => {
+            const val = d[item.key] ?? 0;
+            const cls = val >= 8 ? 'score-good' : val >= 6 ? 'score-ok' : 'score-low';
+            return `<div class="nps-avg-card">
+                        <div class="nps-avg-label">${item.label}</div>
+                        <div class="nps-avg-score ${cls}">${val.toFixed(1)}</div>
+                    </div>`;
+        }).join('');
+
+        // ── 추천/비추천 테이블 ───────────────────────
+        document.getElementById('promoterCount').textContent = `(${d.promoters}명)`;
+        document.getElementById('detractorCount').textContent = `(${d.detractors}명)`;
+
+        document.getElementById('promoterTable').innerHTML = d.promoterList.length
+            ? d.promoterList.map(p => `<tr>
+                    <td>${esc(p.name)}</td>
+                    <td style="text-align:center;">
+                        <span class="badge badge-success">${p.nps}점</span>
+                    </td>
+                </tr>`).join('')
+            : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">해당 없음</td></tr>';
+
+        document.getElementById('detractorTable').innerHTML = d.detractorList.length
+            ? d.detractorList.map(p => `<tr>
+                    <td>${esc(p.name)}</td>
+                    <td style="text-align:center;">
+                        <span class="badge badge-danger">${p.nps}점</span>
+                    </td>
+                </tr>`).join('')
+            : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">해당 없음</td></tr>';
+
+        // ── 6점 이하 수강생 테이블 ───────────────────
+        document.getElementById('lowScoreCount').textContent = `(${d.lowScoreStudents.length}명)`;
+        document.getElementById('lowScoreTable').innerHTML = d.lowScoreStudents.length
+            ? d.lowScoreStudents.map(s => `<tr>
+                    <td style="font-weight:600;">${esc(s.name)}</td>
+                    <td>${s.lowItems.map(item =>
+                        `<span class="badge badge-warning" style="margin:2px;">${esc(item)}</span>`
+                    ).join(' ')}</td>
+                </tr>`).join('')
+            : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">6점 이하 항목 없음</td></tr>';
+    }
+
+    function setBar(prefix, count, pct) {
+        document.getElementById(prefix + 'Stat').textContent = count + '명 (' + pct.toFixed(1) + '%)';
+        setTimeout(() => {
+            document.getElementById(prefix + 'Bar').style.width = pct + '%';
+        }, 50);
+    }
+
+    function clearAnalysis() {
+        document.getElementById('analysisSection').style.display = 'none';
+        document.getElementById('noDataMsg').style.display = 'none';
+        document.getElementById('uploadMsg').style.display = 'none';
+    }
+
+    function esc(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>

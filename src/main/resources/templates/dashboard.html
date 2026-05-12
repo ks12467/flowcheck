@@ -79,11 +79,26 @@
                 </div>
                 <div id="gfStats" style="display:none;">
                     <div class="grid-2" style="gap:12px;margin-bottom:12px;">
+                        <!-- 좌: 만족도 평균(조건부) + 총 응답 수 -->
                         <div class="card" style="margin-bottom:0;text-align:center;">
+                            <div id="gfScoreSection" style="display:none;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                                <div style="display:flex;align-items:flex-end;justify-content:center;gap:6px;">
+                                    <div style="font-size:36px;font-weight:700;color:var(--primary);line-height:1;" id="gfAvgScore">-</div>
+                                    <span id="gfScoreDelta" style="display:none;font-size:11px;font-weight:700;margin-bottom:4px;"></span>
+                                </div>
+                                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="gfScoreLabel">만족도 평균</div>
+                            </div>
                             <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfResponseCount">-</div>
                             <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총 응답 수</div>
                         </div>
+                        <!-- 우: 시트 바로가기(조건부) + 총원 -->
                         <div class="card" style="margin-bottom:0;text-align:center;">
+                            <div id="gfSheetLink" style="display:none;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                                <a id="gfSheetAnchor" href="#" target="_blank" rel="noopener"
+                                   style="font-size:13px;color:var(--primary);font-weight:500;">
+                                    📊 시트 바로가기 →
+                                </a>
+                            </div>
                             <div style="font-size:28px;font-weight:700;color:var(--primary);" id="gfTotalStudents">-</div>
                             <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">총원</div>
                         </div>
@@ -167,19 +182,44 @@
             });
         };
 
+        // 세션 내 이전 평균 점수 저장 (formId → 마지막 조회값)
+        const prevScores = {};
+
         window.onGfFormChange = async function() {
             const trackOpt = trackSelect.options[trackSelect.selectedIndex];
-            const formId = document.getElementById('gfFormSelect').value;
+            const formId   = document.getElementById('gfFormSelect').value;
             if (!formId) {
                 document.getElementById('gfStats').style.display = 'none';
                 document.getElementById('gfSelectMsg').style.display = 'block';
                 return;
             }
 
+            // 선택된 폼 메타 (spreadsheetId, scoreColumnHeader)
+            const form = forms.find(f => String(f.formId) === String(formId));
+
+            // 시트 바로가기
+            if (form?.spreadsheetId) {
+                document.getElementById('gfSheetAnchor').href =
+                    'https://docs.google.com/spreadsheets/d/' + encodeURIComponent(form.spreadsheetId);
+                document.getElementById('gfSheetLink').style.display = 'block';
+            } else {
+                document.getElementById('gfSheetLink').style.display = 'none';
+            }
+
+            // 만족도 평균 섹션 표시 여부
+            if (form?.scoreColumnHeader) {
+                document.getElementById('gfScoreLabel').textContent = form.scoreColumnHeader + ' 평균';
+                document.getElementById('gfScoreSection').style.display = 'block';
+                document.getElementById('gfAvgScore').textContent = '…';
+                document.getElementById('gfScoreDelta').style.display = 'none';
+            } else {
+                document.getElementById('gfScoreSection').style.display = 'none';
+            }
+
             const total = parseInt(trackOpt.dataset.students) || 0;
             document.getElementById('gfSelectMsg').style.display = 'none';
             document.getElementById('gfStats').style.display = 'block';
-            document.getElementById('gfResponseCount').textContent = '조회 중...';
+            document.getElementById('gfResponseCount').textContent = '조회 중…';
             document.getElementById('gfTotalStudents').textContent = total + '명';
             document.getElementById('gfRate').textContent = '-';
             document.getElementById('gfRateBar').style.width = '0%';
@@ -187,8 +227,10 @@
             try {
                 const res  = await fetch(`/api/v1/admin/forms/${formId}/responses`);
                 const data = await res.json();
-                const count = data.data?.responseCount ?? -1;
+                const count    = data.data?.responseCount ?? -1;
+                const avgScore = data.data?.averageScore ?? null;
 
+                // 응답 수 & 제출률
                 if (count < 0) {
                     document.getElementById('gfResponseCount').textContent = '연동 오류';
                     document.getElementById('gfRate').textContent = 'credentials.json 확인 필요';
@@ -197,6 +239,29 @@
                     const pct = total > 0 ? Math.min(100, Math.round(count / total * 100)) : 0;
                     document.getElementById('gfRate').textContent = pct + '%  (' + count + ' / ' + total + '명)';
                     document.getElementById('gfRateBar').style.width = pct + '%';
+                }
+
+                // 만족도 평균 & 델타
+                if (form?.scoreColumnHeader) {
+                    if (avgScore !== null && avgScore !== undefined) {
+                        document.getElementById('gfAvgScore').textContent = avgScore.toFixed(1);
+
+                        const prev = prevScores[formId];
+                        const deltaEl = document.getElementById('gfScoreDelta');
+                        if (prev !== undefined) {
+                            const delta = Math.round((avgScore - prev) * 10) / 10;
+                            if (delta !== 0) {
+                                deltaEl.textContent = (delta > 0 ? '+' : '') + delta;
+                                deltaEl.style.color = delta > 0 ? 'var(--success)' : 'var(--danger)';
+                                deltaEl.style.display = 'inline';
+                            } else {
+                                deltaEl.style.display = 'none';
+                            }
+                        }
+                        prevScores[formId] = avgScore;
+                    } else {
+                        document.getElementById('gfAvgScore').textContent = '-';
+                    }
                 }
             } catch (e) {
                 document.getElementById('gfResponseCount').textContent = '오류';

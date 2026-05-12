@@ -12,93 +12,150 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 
-<!-- 사이드바 프래그먼트 -->
-<nav class="sidebar" th:fragment="sidebar">
-    <div class="sidebar-logo">
-        FlowCheck
-        <span>학습 진척도 관리</span>
-    </div>
-    <ul class="sidebar-menu">
-        <li>
-            <a th:href="@{/dashboard}" class="sidebar-item">📊 대시보드</a>
-        </li>
-        <!-- 운영 관리 토글 그룹 -->
-        <li>
-            <button class="sidebar-toggle" onclick="toggleSidebarMenu(this, 'adminMenu')" aria-expanded="false">
-                ⚙️ 운영 관리
-                <span class="toggle-arrow">▾</span>
-            </button>
-            <ul class="sidebar-submenu" id="adminMenu" style="display:none;">
-                <li><a th:href="@{/admin/tracks}" class="sidebar-item sidebar-subitem">🗂️ 트랙 관리</a></li>
-                <li><a th:href="@{/admin/pms}" class="sidebar-item sidebar-subitem">👥 PM 관리</a></li>
-                <li><a th:href="@{/admin/students}" class="sidebar-item sidebar-subitem">🎓 수강생 관리</a></li>
-                <li><a th:href="@{/admin/forms}" class="sidebar-item sidebar-subitem">📋 구글폼 관리</a></li>
-            </ul>
-        </li>
-        <li th:if="${pm != null and pm.role == 'ADMIN'}">
-            <a th:href="@{/admin/deleted}" class="sidebar-item">🗑️ 삭제 데이터 관리</a>
-        </li>
-        <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
-            <li><div class="sidebar-section">내 트랙</div></li>
-            <li th:each="t : ${sidebarTracks}">
-                <a th:href="@{/tracks/{id}/students(id=${t.id})}"
-                   class="sidebar-item"
-                   th:text="${t.name}">트랙명</a>
+<!-- 상단 네비게이션 바 프래그먼트 -->
+<nav class="topnav" th:fragment="sidebar">
+    <div class="topnav-inner">
+
+        <!-- 로고 -->
+        <a class="topnav-logo" th:href="@{/dashboard}">FlowCheck</a>
+
+        <!-- 메뉴 -->
+        <ul class="topnav-menu">
+            <li>
+                <a th:href="@{/dashboard}" class="topnav-item">대시보드</a>
             </li>
-        </th:block>
-    </ul>
-    <div class="sidebar-footer">
-        <div class="pm-name" th:if="${pm != null}" th:text="${pm.name} + ' PM'">이름 PM</div>
-        <a th:href="@{/logout}" class="btn-logout" style="display:block;text-align:center;">로그아웃</a>
+
+            <!-- 운영 관리 드롭다운 -->
+            <li class="topnav-dropdown">
+                <button type="button" class="topnav-item topnav-dropdown-btn">
+                    운영 관리 <span class="topnav-arrow">▾</span>
+                </button>
+                <ul class="topnav-submenu">
+                    <li><a th:href="@{/admin/tracks}"   class="topnav-subitem">트랙 관리</a></li>
+                    <li><a th:href="@{/admin/pms}"      class="topnav-subitem">PM 관리</a></li>
+                    <li><a th:href="@{/admin/students}" class="topnav-subitem">수강생 관리</a></li>
+                    <li><a th:href="@{/admin/forms}"    class="topnav-subitem">구글폼 관리</a></li>
+                    <li><a th:href="@{/admin/nps}"      class="topnav-subitem">NPS 분석</a></li>
+                </ul>
+            </li>
+
+            <!-- 삭제 데이터 (ADMIN 전용) -->
+            <li th:if="${pm != null and pm.role == 'ADMIN'}">
+                <a th:href="@{/admin/deleted}" class="topnav-item">삭제 데이터</a>
+            </li>
+
+            <!-- 내 트랙 -->
+            <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
+                <li class="topnav-divider"></li>
+                <li th:each="t : ${sidebarTracks}">
+                    <a th:href="@{/tracks/{id}/students(id=${t.id})}"
+                       class="topnav-item topnav-track"
+                       th:text="${t.name}">트랙명</a>
+                </li>
+            </th:block>
+        </ul>
+
+        <!-- 우측: PM 이름 + 로그아웃 -->
+        <div class="topnav-right">
+            <span class="topnav-pm" th:if="${pm != null}" th:text="${pm.name} + ' PM'"></span>
+            <a th:href="@{/logout}" class="topnav-logout">로그아웃</a>
+        </div>
+
+        <!-- 모바일 햄버거 -->
+        <button type="button" class="topnav-hamburger" id="topnavHamburger" aria-label="메뉴 열기">☰</button>
     </div>
+
+    <!-- 모바일 드로어 -->
+    <div class="topnav-drawer" id="topnavDrawer">
+        <ul class="topnav-drawer-menu">
+            <li><a th:href="@{/dashboard}" class="topnav-drawer-item">대시보드</a></li>
+            <li class="topnav-drawer-section">운영 관리</li>
+            <li><a th:href="@{/admin/tracks}"   class="topnav-drawer-item topnav-drawer-sub">트랙 관리</a></li>
+            <li><a th:href="@{/admin/pms}"      class="topnav-drawer-item topnav-drawer-sub">PM 관리</a></li>
+            <li><a th:href="@{/admin/students}" class="topnav-drawer-item topnav-drawer-sub">수강생 관리</a></li>
+            <li><a th:href="@{/admin/forms}"    class="topnav-drawer-item topnav-drawer-sub">구글폼 관리</a></li>
+            <li><a th:href="@{/admin/nps}"      class="topnav-drawer-item topnav-drawer-sub">NPS 분석</a></li>
+            <li th:if="${pm != null and pm.role == 'ADMIN'}">
+                <a th:href="@{/admin/deleted}" class="topnav-drawer-item">삭제 데이터</a>
+            </li>
+            <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
+                <li class="topnav-drawer-section">내 트랙</li>
+                <li th:each="t : ${sidebarTracks}">
+                    <a th:href="@{/tracks/{id}/students(id=${t.id})}"
+                       class="topnav-drawer-item"
+                       th:text="${t.name}">트랙명</a>
+                </li>
+            </th:block>
+            <li th:if="${pm != null}">
+                <div class="topnav-drawer-footer">
+                    <span th:text="${pm.name} + ' PM'"></span>
+                    <a th:href="@{/logout}" class="topnav-logout" style="margin-left:auto;">로그아웃</a>
+                </div>
+            </li>
+        </ul>
+    </div>
+
     <script>
-        function toggleSidebarMenu(btn, menuId) {
-            const menu = document.getElementById(menuId);
-            const isOpen = btn.classList.contains('open');
-            if (isOpen) {
-                menu.style.display = 'none';
-                btn.classList.remove('open');
-                btn.setAttribute('aria-expanded', 'false');
-            } else {
-                menu.style.display = 'block';
-                btn.classList.add('open');
-                btn.setAttribute('aria-expanded', 'true');
-            }
-        }
+        (function () {
+            const path = location.pathname;
 
-        (function() {
-            // 운영 관리 하위 페이지면 자동으로 펼치기
-            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms'];
-            if (adminPaths.some(p => location.pathname.startsWith(p))) {
-                const btn = document.querySelector('[onclick*="adminMenu"]');
-                const menu = document.getElementById('adminMenu');
-                if (btn && menu) {
-                    menu.style.display = 'block';
-                    btn.classList.add('open');
-                    btn.setAttribute('aria-expanded', 'true');
+            // ── 활성 탭 하이라이트 ──────────────────────
+            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms', '/admin/nps'];
+            const isAdmin = adminPaths.some(p => path.startsWith(p));
+
+            document.querySelectorAll('.topnav-item[href], .topnav-track[href]').forEach(el => {
+                const href = el.getAttribute('href');
+                if (!href) return;
+                if (href === '/dashboard' ? path === '/dashboard' : path.startsWith(href)) {
+                    el.classList.add('active');
                 }
+            });
+
+            document.querySelectorAll('.topnav-subitem[href]').forEach(el => {
+                const href = el.getAttribute('href');
+                if (href && path.startsWith(href)) {
+                    el.classList.add('active');
+                }
+            });
+
+            if (isAdmin) {
+                document.querySelector('.topnav-dropdown-btn')?.classList.add('active');
             }
 
-            // 768px 이하: 햄버거 버튼 & 백드롭 주입
-            const sidebar = document.querySelector('.sidebar');
-
-            const backdrop = document.createElement('div');
-            backdrop.className = 'sidebar-backdrop';
-            backdrop.addEventListener('click', () => {
-                sidebar.classList.remove('mobile-open');
-                backdrop.classList.remove('open');
+            // 드로어에서도 활성 표시
+            document.querySelectorAll('.topnav-drawer-item[href]').forEach(el => {
+                const href = el.getAttribute('href');
+                if (!href) return;
+                if (href === '/dashboard' ? path === '/dashboard' : path.startsWith(href)) {
+                    el.classList.add('active');
+                }
             });
-            document.body.appendChild(backdrop);
 
-            const hamburger = document.createElement('button');
-            hamburger.className = 'mobile-hamburger';
-            hamburger.setAttribute('aria-label', '메뉴 열기');
-            hamburger.innerHTML = '☰';
-            hamburger.addEventListener('click', () => {
-                sidebar.classList.toggle('mobile-open');
-                backdrop.classList.toggle('open');
+            // ── 드롭다운 (클릭) ──────────────────────────
+            document.querySelectorAll('.topnav-dropdown-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    btn.closest('.topnav-dropdown').classList.toggle('open');
+                });
             });
-            document.body.appendChild(hamburger);
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.topnav-dropdown.open').forEach(d => d.classList.remove('open'));
+            });
+
+            // ── 모바일 햄버거 ────────────────────────────
+            const hamburger = document.getElementById('topnavHamburger');
+            const drawer    = document.getElementById('topnavDrawer');
+            hamburger?.addEventListener('click', e => {
+                e.stopPropagation();
+                drawer.classList.toggle('open');
+                hamburger.textContent = drawer.classList.contains('open') ? '✕' : '☰';
+            });
+            document.addEventListener('click', e => {
+                if (!drawer?.contains(e.target) && e.target !== hamburger) {
+                    drawer?.classList.remove('open');
+                    if (hamburger) hamburger.textContent = '☰';
+                }
+            });
         })();
     </script>
 </nav>

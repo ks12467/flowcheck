@@ -133,6 +133,8 @@ public class WebController {
                     m.put("formId", f.getId());
                     m.put("name", f.getName());
                     m.put("trackId", f.getTrack().getId());
+                    m.put("spreadsheetId", f.getSpreadsheetId());
+                    m.put("scoreColumnHeader", f.getScoreColumnHeader());
                     return m;
                 }).toList();
             }
@@ -272,6 +274,12 @@ public class WebController {
     public String adminForms(Model model) {
         model.addAttribute("allTracks", trackRepository.findAll());
         return "admin/forms";
+    }
+
+    @GetMapping("/admin/nps")
+    public String adminNps(Model model) {
+        model.addAttribute("allTracks", trackRepository.findAll());
+        return "admin/nps";
     }
 
     // ── 진척도 제출 폼 (인증 불필요) ─────────────────────────────────────────
