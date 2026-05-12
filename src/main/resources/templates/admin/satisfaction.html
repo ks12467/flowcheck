@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('만족도 분석')}"></head>
+<body>
+<div class="app-container">
+    <nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+    <main class="content-area">
+        <div class="flex-between mb-16">
+            <h1 class="page-title" style="margin-bottom:0">만족도 조사 분석</h1>
+        </div>
+
+        <!-- ── 업로드 카드 ──────────────────────────── -->
+        <div class="card">
+            <div class="card-title">📤 데이터 업로드</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:260px;">
+                    <label class="form-label">트랙 선택</label>
+                    <div id="trackSelectorContainer"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;min-width:160px;">
+                    <label class="form-label">업로드 이름 <span style="color:var(--danger);">*</span></label>
+                    <input class="form-control" type="text" id="uploadName" placeholder="예: 1주차, 중간점검" maxlength="50">
+                </div>
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:240px;">
+                    <label class="form-label">엑셀 파일 <span style="color:var(--text-muted);font-weight:400;">(.xlsx)</span></label>
+                    <input class="form-control" type="file" id="satFile" accept=".xlsx">
+                </div>
+                <button class="btn btn-primary" onclick="uploadSatisfaction()" id="uploadBtn"
+                        style="white-space:nowrap;flex-shrink:0;">업로드</button>
+            </div>
+            <div id="uploadMsg" style="margin-top:10px;font-size:13px;display:none;"></div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+                헤더 키워드 자동 매핑 — 이름·커리큘럼 만족도/난이도·강의 전달력/교재/품질/체감 난이도/추천/과제 만족도·운영 항목·자유의견
+            </div>
+        </div>
+
+        <!-- ── 업로드 탭 ──────────────────────────────── -->
+        <div id="tabSection" style="display:none;margin-bottom:0;">
+            <div id="uploadTabs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;padding:0 0 0 2px;border-bottom:2px solid var(--border);margin-bottom:20px;"></div>
+        </div>
+
+        <!-- ── 삭제 확인 모달 ────────────────────────── -->
+        <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:var(--radius);padding:28px 28px 20px;min-width:320px;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
+                <div style="font-size:15px;font-weight:600;margin-bottom:8px;">업로드 삭제</div>
+                <div id="deleteModalMsg" style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;"></div>
+                <div style="display:flex;justify-content:flex-end;gap:8px;">
+                    <button class="btn btn-secondary" onclick="closeDeleteModal()">취소</button>
+                    <button class="btn btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 분석 결과 ──────────────────────────────── -->
+        <div id="analysisSection" style="display:none;">
+
+            <!-- 요약 헤더 -->
+            <div class="card" style="margin-bottom:16px;padding:16px 20px;">
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);">총 응답자</div>
+                        <div id="totalCount" style="font-size:28px;font-weight:700;color:var(--primary);line-height:1.2;">-</div>
+                        <div style="font-size:12px;color:var(--text-muted);">명</div>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">커리큘럼 만족도 평균</div>
+                        <div style="display:flex;align-items:baseline;gap:6px;">
+                            <span id="headerCurriculumScore" style="font-size:36px;font-weight:800;line-height:1;">-</span>
+                            <span style="font-size:13px;color:var(--text-muted);">/ 10</span>
+                        </div>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">강의 전달력 평균</div>
+                        <div style="display:flex;align-items:baseline;gap:6px;">
+                            <span id="headerLectureScore" style="font-size:36px;font-weight:800;line-height:1;">-</span>
+                            <span style="font-size:13px;color:var(--text-muted);">/ 5</span>
+                        </div>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">운영 만족도 평균 (스크럼 기준)</div>
+                        <div style="display:flex;align-items:baseline;gap:6px;">
+                            <span id="headerOpsScore" style="font-size:36px;font-weight:800;line-height:1;">-</span>
+                            <span style="font-size:13px;color:var(--text-muted);">/ 10</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2" style="gap:16px;margin-bottom:16px;">
+                <!-- ── 커리큘럼 섹션 ───────────────────────── -->
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">📚 커리큘럼</div>
+                    <div id="curriculumBars"></div>
+                </div>
+
+                <!-- ── 강의 섹션 ──────────────────────────── -->
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">🎓 강의</div>
+                    <div id="lectureBars"></div>
+                </div>
+            </div>
+
+            <!-- ── 운영 섹션 ──────────────────────────────── -->
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-title">⚙️ 운영</div>
+                <div id="opsBars" style="display:grid;grid-template-columns:repeat(2,1fr);gap:0 24px;"></div>
+            </div>
+
+            <!-- ── 자유의견 ───────────────────────────────── -->
+            <div class="grid-2" style="gap:16px;">
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">💬 자유의견 <span id="freeCommentCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div id="freeCommentList" class="comment-list"></div>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">📣 운영진 의견 <span id="operationCommentCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div id="operationCommentList" class="comment-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 데이터 없음 안내 -->
+        <div id="noDataMsg" class="card" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
+            선택한 트랙의 만족도 데이터가 없습니다. 위에서 엑셀 파일을 업로드해주세요.
+        </div>
+    </main>
+</div>
+
+<style>
+    /* 탭 스타일 — NPS와 동일 */
+    .tab-wrapper {
+        display: flex; align-items: stretch;
+        border: 1.5px solid var(--border); border-bottom: none;
+        border-radius: 6px 6px 0 0; margin-bottom: -2px;
+        background: var(--bg); transition: background .15s;
+    }
+    .tab-wrapper:hover { background: var(--bg-card); }
+    .tab-wrapper.active {
+        background: var(--bg-card); border-color: var(--primary);
+        border-bottom-color: var(--bg-card);
+    }
+    .upload-tab {
+        padding: 7px 14px 7px 16px; border: none; background: transparent;
+        font-size: 13px; font-weight: 500; color: var(--text-muted);
+        cursor: pointer; white-space: nowrap;
+    }
+    .tab-wrapper:hover .upload-tab { color: var(--primary); }
+    .tab-wrapper.active .upload-tab { color: var(--primary); font-weight: 600; }
+    .tab-actions {
+        display: flex; align-items: center; gap: 2px;
+        padding: 0 6px 0 0; position: relative; z-index: 1;
+    }
+    .tab-action-btn {
+        border: none; background: transparent; cursor: pointer;
+        padding: 3px 4px; border-radius: 4px; font-size: 13px; line-height: 1;
+        color: var(--text-muted); opacity: 0; pointer-events: auto;
+        transition: opacity .15s, background .15s;
+    }
+    .tab-wrapper:hover .tab-action-btn,
+    .tab-wrapper.active .tab-action-btn { opacity: 1; }
+    .tab-action-btn:hover { background: var(--border); color: var(--text); }
+    .tab-edit-wrapper {
+        display: flex; align-items: center; gap: 4px; padding: 4px 8px;
+        border: 1.5px solid var(--primary); border-bottom: none;
+        border-radius: 6px 6px 0 0; margin-bottom: -2px; background: var(--bg-card);
+    }
+    .tab-edit-input {
+        border: 1px solid var(--border); border-radius: 4px;
+        padding: 3px 8px; font-size: 13px; width: 130px; outline: none;
+    }
+    .tab-edit-input:focus { border-color: var(--primary); }
+    .tab-edit-btn {
+        border: none; background: transparent; cursor: pointer;
+        font-size: 14px; padding: 2px 4px; border-radius: 4px; line-height: 1;
+    }
+    .tab-edit-btn:hover { background: var(--border); }
+    /* 의견 목록 */
+    .comment-list { max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }
+    .comment-item {
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 10px 14px;
+        border-left: 3px solid var(--primary);
+    }
+    .comment-author {
+        font-size: 12px; font-weight: 600; color: var(--primary);
+        margin-bottom: 4px;
+    }
+    .comment-body {
+        font-size: 13px; line-height: 1.6; color: var(--text);
+    }
+    .comment-empty { font-size: 13px; color: var(--text-muted); padding: 12px 0; }
+    /* 항목 바 */
+    .sat-bar-wrap { margin-bottom: 10px; }
+    .sat-bar-label {
+        display: flex; justify-content: space-between;
+        font-size: 13px; margin-bottom: 4px; color: var(--text);
+    }
+    .sat-bar-val { font-weight: 600; }
+</style>
+
+<script>
+    let currentTrackId   = null;
+    let activeUploadName = null;
+    let pendingDeleteName = null;
+    let pendingDeleteTrackId = null;
+    let modalJustOpened = false;
+
+    // ── TrackSelector 초기화 ──────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        initTrackSelector({
+            container: document.getElementById('trackSelectorContainer'),
+            idPrefix: 'sat',
+            getCourseTypes: fetchCourseTypes,
+            getTracksByCourseType: fetchTracksByCourseType,
+            onSelect(trackId) {
+                currentTrackId = trackId || null;
+                onTrackChange();
+            }
+        });
+    });
+
+    // ── 섹션 정의 (max: 5점 만점 항목, 없으면 10점 만점) ───────────
+    const CURRICULUM_ITEMS = [
+        { key: 'avgCurriculumSatisfaction', label: '커리큘럼 만족도' },
+        { key: 'avgCurriculumDifficulty',   label: '커리큘럼 난이도', max: 5 },
+    ];
+    const LECTURE_ITEMS = [
+        { key: 'avgLectureDelivery',        label: '강의 전달력',  max: 5 },
+        { key: 'avgLectureMaterial',        label: '강의 교재',    max: 5 },
+        { key: 'avgLectureQuality',         label: '강의 품질',    max: 5 },
+        { key: 'avgLectureDifficulty',      label: '체감 난이도',  max: 5 },
+        { key: 'avgLectureNps',             label: '강의 추천도' },
+        { key: 'avgAssignmentSatisfaction', label: '과제 만족도',  max: 5 },
+    ];
+    const OPS_ITEMS = [
+        { key: 'avgScrumScore',         label: '팀원들과 스크럼' },
+        { key: 'avgTutorHelpScore',     label: '튜터님들의 도움' },
+        { key: 'avgTutorMeetScore',     label: '튜터님들의 면담' },
+        { key: 'avgManagerScore',       label: '담임매니저 도움/면담' },
+        { key: 'avgFeedbackSpeedScore', label: '운영진 피드백 속도' },
+        { key: 'avgBriefScore',         label: '상세한 발제문' },
+    ];
+
+    // ── 트랙 변경 ────────────────────────────────────────────────────
+    async function onTrackChange() {
+        const trackId = currentTrackId;
+        clearAnalysis();
+        document.getElementById('tabSection').style.display = 'none';
+        document.getElementById('uploadTabs').innerHTML = '';
+        activeUploadName = null;
+        if (!trackId) return;
+        await loadTabs(trackId);
+    }
+
+    async function loadTabs(trackId, selectName) {
+        try {
+            const res  = await fetch(`/api/v1/admin/satisfaction/uploads?trackId=${trackId}`);
+            const data = await res.json();
+            const names = (data.data || []).filter(n => n != null && n !== '');
+            renderTabs(trackId, names, selectName);
+        } catch (e) { console.error('탭 로드 실패', e); }
+    }
+
+    function renderTabs(trackId, names, selectName) {
+        const tabSection = document.getElementById('tabSection');
+        const tabsEl     = document.getElementById('uploadTabs');
+        tabsEl.innerHTML = '';
+        if (names.length === 0) { tabSection.style.display = 'none'; clearAnalysis(); return; }
+        tabSection.style.display = 'block';
+        names.forEach(name => tabsEl.appendChild(buildTabEl(trackId, name)));
+        const target = selectName && names.includes(selectName) ? selectName : names[0];
+        selectTab(trackId, target);
+    }
+
+    function buildTabEl(trackId, name) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tab-wrapper';
+        wrapper.dataset.name = name;
+
+        const btn = document.createElement('button');
+        btn.className = 'upload-tab';
+        btn.textContent = name;
+        btn.addEventListener('click', () => selectTab(trackId, name));
+
+        const actions = document.createElement('div');
+        actions.className = 'tab-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'tab-action-btn';
+        editBtn.title = '이름 수정';
+        editBtn.textContent = '✏️';
+        editBtn.addEventListener('click', e => { e.stopPropagation(); startRename(trackId, name, wrapper); });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'tab-action-btn';
+        delBtn.title = '삭제';
+        delBtn.textContent = '🗑️';
+        delBtn.addEventListener('click', e => { e.stopPropagation(); openDeleteModal(trackId, name); });
+
+        actions.append(editBtn, delBtn);
+        wrapper.append(btn, actions);
+        return wrapper;
+    }
+
+    function selectTab(trackId, uploadName) {
+        if (!uploadName) return;
+        activeUploadName = uploadName;
+        document.querySelectorAll('.tab-wrapper').forEach(w => {
+            w.classList.toggle('active', w.dataset.name === uploadName);
+        });
+        loadAnalysis(trackId, uploadName);
+    }
+
+    // ── 인라인 이름 수정 ────────────────────────────────────────────
+    function startRename(trackId, name, wrapper) {
+        if (wrapper.classList.contains('editing')) return;
+        wrapper.classList.add('editing');
+        wrapper.innerHTML = '';
+        wrapper.className = 'tab-edit-wrapper';
+
+        const input = document.createElement('input');
+        input.className = 'tab-edit-input';
+        input.value = name; input.maxLength = 50;
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'tab-edit-btn'; confirmBtn.title = '확인';
+        confirmBtn.textContent = '✔'; confirmBtn.style.color = 'var(--success)';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'tab-edit-btn'; cancelBtn.title = '취소';
+        cancelBtn.textContent = '✕'; cancelBtn.style.color = 'var(--danger)';
+
+        const doRename = async () => {
+            const newName = input.value.trim();
+            if (!newName) { input.focus(); return; }
+            if (newName === name) { cancelRename(trackId, name, wrapper); return; }
+            confirmBtn.disabled = cancelBtn.disabled = true;
+            try {
+                const res  = await fetch(
+                    `/api/v1/admin/satisfaction/upload-name?trackId=${trackId}&oldName=${encodeURIComponent(name)}&newName=${encodeURIComponent(newName)}`,
+                    { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) { await loadTabs(trackId, newName); }
+                else { alert(data.message || '이름 변경에 실패했습니다.'); cancelRename(trackId, name, wrapper); }
+            } catch (e) { alert('서버 오류가 발생했습니다.'); cancelRename(trackId, name, wrapper); }
+        };
+
+        confirmBtn.addEventListener('click', doRename);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doRename();
+            if (e.key === 'Escape') cancelRename(trackId, name, wrapper);
+        });
+        cancelBtn.addEventListener('click', () => cancelRename(trackId, name, wrapper));
+        wrapper.append(input, confirmBtn, cancelBtn);
+        input.focus(); input.select();
+    }
+
+    function cancelRename(trackId, name, wrapper) {
+        const tabsEl = document.getElementById('uploadTabs');
+        const newEl  = buildTabEl(trackId, name);
+        tabsEl.replaceChild(newEl, wrapper);
+        if (activeUploadName === name) newEl.classList.add('active');
+    }
+
+    // ── 삭제 모달 ────────────────────────────────────────────────────
+    function openDeleteModal(trackId, name) {
+        pendingDeleteTrackId = trackId;
+        pendingDeleteName    = name;
+        document.getElementById('deleteModalMsg').innerHTML =
+            `'<strong>${esc(name)}</strong>' 데이터를 삭제하시겠습니까?<br><span style="font-size:12px;color:var(--danger);">삭제된 데이터는 복구할 수 없습니다.</span>`;
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'flex';
+        modalJustOpened = true;
+        setTimeout(() => { modalJustOpened = false; }, 0);
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        pendingDeleteTrackId = pendingDeleteName = null;
+        modalJustOpened = false;
+    }
+
+    async function confirmDelete() {
+        if (pendingDeleteTrackId == null || pendingDeleteName == null) return;
+        const trackId    = pendingDeleteTrackId;
+        const uploadName = pendingDeleteName;
+        const btn = document.getElementById('deleteConfirmBtn');
+        btn.disabled = true; btn.textContent = '삭제 중…';
+        try {
+            const res  = await fetch(
+                `/api/v1/admin/satisfaction/upload?trackId=${trackId}&uploadName=${encodeURIComponent(uploadName)}`,
+                { method: 'DELETE' });
+            const data = await res.json();
+            closeDeleteModal();
+            if (res.ok) { await loadTabs(trackId); }
+            else { alert(data.message || '삭제에 실패했습니다.'); }
+        } catch (e) { alert('서버 오류가 발생했습니다.'); closeDeleteModal(); }
+        finally { btn.disabled = false; btn.textContent = '삭제'; }
+    }
+
+    document.getElementById('deleteModal').addEventListener('click', e => {
+        if (modalJustOpened) return;
+        if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+    });
+
+    // ── 업로드 ───────────────────────────────────────────────────────
+    async function uploadSatisfaction() {
+        const trackId    = currentTrackId;
+        const uploadName = document.getElementById('uploadName').value.trim();
+        const file       = document.getElementById('satFile').files[0];
+        const btn        = document.getElementById('uploadBtn');
+        document.getElementById('uploadMsg').style.display = 'none';
+
+        if (!trackId)    { showUploadMsg('트랙을 선택해주세요.', false); return; }
+        if (!uploadName) { showUploadMsg('업로드 이름을 입력해주세요.', false); return; }
+        if (!file)       { showUploadMsg('파일을 선택해주세요.', false); return; }
+        if (!file.name.toLowerCase().endsWith('.xlsx')) {
+            showUploadMsg('.xlsx 파일만 업로드 가능합니다.', false); return;
+        }
+
+        btn.disabled = true; btn.textContent = '업로드 중…';
+        const formData = new FormData();
+        formData.append('trackId', trackId);
+        formData.append('uploadName', uploadName);
+        formData.append('file', file);
+
+        try {
+            const res  = await fetch('/api/v1/admin/satisfaction/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                showUploadMsg('✅ ' + data.message, true);
+                await loadTabs(trackId, uploadName);
+            } else {
+                showUploadMsg('❌ ' + (data.message || '업로드 실패'), false);
+            }
+        } catch (e) { showUploadMsg('❌ 서버 오류가 발생했습니다.', false); }
+        finally { btn.disabled = false; btn.textContent = '업로드'; }
+    }
+
+    function showUploadMsg(msg, ok) {
+        const el = document.getElementById('uploadMsg');
+        el.textContent = msg;
+        el.style.color   = ok ? 'var(--success)' : 'var(--danger)';
+        el.style.display = 'block';
+    }
+
+    // ── 분석 로드 ────────────────────────────────────────────────────
+    async function loadAnalysis(trackId, uploadName) {
+        clearAnalysis();
+        try {
+            const res  = await fetch(
+                `/api/v1/admin/satisfaction/analysis?trackId=${trackId}&uploadName=${encodeURIComponent(uploadName)}`);
+            const data = await res.json();
+            if (res.ok && data.data) renderAnalysis(data.data);
+        } catch (e) { console.error('분석 로드 실패', e); }
+    }
+
+    function renderAnalysis(d) {
+        document.getElementById('noDataMsg').style.display = 'none';
+        if (!d.hasData) {
+            document.getElementById('analysisSection').style.display = 'none';
+            document.getElementById('noDataMsg').style.display = 'block';
+            return;
+        }
+        document.getElementById('analysisSection').style.display = 'block';
+
+        // ── 요약 헤더 ────────────────────────────────
+        document.getElementById('totalCount').textContent = d.totalCount;
+        setScoreEl('headerCurriculumScore', d.avgCurriculumSatisfaction, 10);
+        setScoreEl('headerLectureScore',    d.avgLectureDelivery,        5);
+        setScoreEl('headerOpsScore',        d.avgScrumScore,             10);
+
+        // ── 섹션별 바 차트 ────────────────────────────
+        renderBars('curriculumBars', CURRICULUM_ITEMS, d);
+        renderBars('lectureBars',    LECTURE_ITEMS,    d);
+        renderBars('opsBars',        OPS_ITEMS,        d);
+
+        // ── 자유의견 ─────────────────────────────────
+        renderComments('freeCommentList',      'freeCommentCount',      d.freeComments);
+        renderComments('operationCommentList', 'operationCommentCount', d.operationComments);
+    }
+
+    function renderBars(containerId, items, d) {
+        const el = document.getElementById(containerId);
+        el.innerHTML = items.map(item => {
+            const max   = item.max ?? 10;
+            const val   = d[item.key] ?? 0;
+            // 색상 기준: 5점 만점은 4/5 이상=good, 3/5 이상=ok; 10점 만점은 8/10 이상=good, 6/10 이상=ok
+            const goodTh = max === 5 ? 4   : 8;
+            const okTh   = max === 5 ? 3   : 6;
+            const color  = val >= goodTh ? 'var(--success)' : val >= okTh ? 'var(--warning)' : 'var(--danger)';
+            const pct    = max > 0 ? Math.min(100, (val / max) * 100) : 0;
+            const label  = max === 5
+                ? `${val.toFixed(1)} <span style="font-size:11px;font-weight:400;color:var(--text-muted);">/ 5</span>`
+                : val.toFixed(1);
+            return `<div class="sat-bar-wrap">
+                <div class="sat-bar-label">
+                    <span>${item.label}</span>
+                    <span class="sat-bar-val" style="color:${color};">${label}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar-fill" style="width:0%;background:${color};transition:width .6s;"
+                         data-width="${pct}"></div>
+                </div>
+            </div>`;
+        }).join('');
+        setTimeout(() => {
+            el.querySelectorAll('.progress-bar-fill[data-width]').forEach(bar => {
+                bar.style.width = bar.dataset.width + '%';
+            });
+        }, 50);
+    }
+
+    function setScoreEl(id, val, max) {
+        max = max ?? 10;
+        const el = document.getElementById(id);
+        el.textContent = val > 0 ? val.toFixed(1) : '-';
+        const goodTh = max === 5 ? 4 : 8;
+        const okTh   = max === 5 ? 3 : 6;
+        el.style.color = val >= goodTh ? 'var(--success)' : val >= okTh ? 'var(--warning)' : val > 0 ? 'var(--danger)' : 'var(--text-muted)';
+    }
+
+    function renderComments(listId, countId, comments) {
+        document.getElementById(countId).textContent = comments?.length ? `(${comments.length}건)` : '';
+        const el = document.getElementById(listId);
+        if (!comments || comments.length === 0) {
+            el.innerHTML = '<div class="comment-empty">의견이 없습니다.</div>';
+            return;
+        }
+        el.innerHTML = comments.map(c =>
+            `<div class="comment-item">
+                <div class="comment-author">${esc(c.name || '익명')}</div>
+                <div class="comment-body">${esc(c.comment)}</div>
+            </div>`
+        ).join('');
+    }
+
+    function clearAnalysis() {
+        document.getElementById('analysisSection').style.display = 'none';
+        document.getElementById('noDataMsg').style.display = 'none';
+        document.getElementById('uploadMsg').style.display = 'none';
+    }
+
+    function esc(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+</script>
+</body>
+</html>

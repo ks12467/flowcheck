@@ -30,4 +30,9 @@ public interface TrackRepository extends JpaRepository<Track, Long> {
     @Modifying
     @Query(value = "DELETE FROM TRACK WHERE id = :id", nativeQuery = true)
     void permanentDeleteById(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT t.courseType FROM Track t WHERE t.courseType IS NOT NULL ORDER BY t.courseType")
+    List<String> findDistinctCourseTypes();
+
+    List<Track> findAllByCourseTypeOrderByGenerationDesc(String courseType);
 }

@@ -41,6 +41,13 @@ public class NpsAnalysisResponse {
     // 6점 이하 수강생
     private List<LowScoreStudent> lowScoreStudents;
 
+    // 코멘트
+    private List<String> npsComments;
+    private List<String> opsComments;
+
+    // 수강생별 전체 점수 + 코멘트 (팝업용)
+    private List<StudentDetail> studentDetails;
+
     @Getter
     @AllArgsConstructor
     public static class PersonScore {
@@ -53,5 +60,21 @@ public class NpsAnalysisResponse {
     public static class LowScoreStudent {
         private String name;
         private List<String> lowItems; // e.g. ["소통: 5", "몰입: 4"]
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class StudentDetail {
+        private String name;
+        private Integer difficulty;
+        private Integer skill;
+        private Integer growth;
+        private Integer communication;
+        private Integer immersion;
+        private Integer opsSatisfaction;
+        private Integer curriculumSatisfaction;
+        private Integer nps;
+        private String opsComment;
+        private String npsComment;
     }
 }

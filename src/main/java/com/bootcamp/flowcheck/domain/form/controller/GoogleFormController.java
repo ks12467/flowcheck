@@ -52,10 +52,23 @@ public class GoogleFormController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getFormResponses(@PathVariable Long id) {
         int count = googleFormService.getResponseCount(id);
         double avgScore = googleFormService.getAverageScore(id);
+        int[] dist = googleFormService.getScoreDistribution(id);
+
         String message = count >= 0 ? "응답 수를 조회했습니다." : "스프레드시트에 접근할 수 없습니다.";
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("responseCount", count);
         data.put("averageScore", avgScore >= 0 ? avgScore : null);
+
+        if (dist != null) {
+            int total = dist[0] + dist[1] + dist[2];
+            data.put("highCount", dist[0]);
+            data.put("midCount",  dist[1]);
+            data.put("lowCount",  dist[2]);
+            data.put("highPct", total > 0 ? Math.round(dist[0] * 1000.0 / total) / 10.0 : 0.0);
+            data.put("midPct",  total > 0 ? Math.round(dist[1] * 1000.0 / total) / 10.0 : 0.0);
+            data.put("lowPct",  total > 0 ? Math.round(dist[2] * 1000.0 / total) / 10.0 : 0.0);
+        }
+
         return ResponseEntity.ok(ApiResponse.success(data, message));
     }
 

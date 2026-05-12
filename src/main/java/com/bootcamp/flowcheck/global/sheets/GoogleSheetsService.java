@@ -45,6 +45,9 @@ public class GoogleSheetsService {
     // 캐시: "spreadsheetId\0scoreColumnHeader" → [averageScore*1000, expiresAtMillis]
     private final Map<String, long[]> scoreCache = new ConcurrentHashMap<>();
 
+    // 캐시: "spreadsheetId\0dist\0scoreColumnHeader" → [highCount, midCount, lowCount, expiresAtMillis]
+    private final Map<String, long[]> distCache = new ConcurrentHashMap<>();
+
     @PostConstruct
     public void init() {
         try {
@@ -220,10 +223,77 @@ public class GoogleSheetsService {
         }
     }
 
+    /**
+     * scoreColumnHeader 컬럼의 점수 구간 분포를 반환합니다.
+     *
+     * @return int[]{highCount(9~10), midCount(7~8), lowCount(0~6)}, 오류 시 null
+     */
+    public int[] getScoreDistribution(String spreadsheetId, String scoreColumnHeader) {
+        if (sheetsClient == null
+                || spreadsheetId == null || spreadsheetId.isBlank()
+                || scoreColumnHeader == null || scoreColumnHeader.isBlank()) {
+            return null;
+        }
+
+        String cacheKey = spreadsheetId + "\0dist\0" + scoreColumnHeader;
+        long[] cached = distCache.get(cacheKey);
+        if (cached != null && System.currentTimeMillis() < cached[3]) {
+            log.debug("[Sheets] 분포 캐시 히트: key={}", cacheKey);
+            return new int[]{(int) cached[0], (int) cached[1], (int) cached[2]};
+        }
+
+        try {
+            // 헤더 컬럼 인덱스 탐색
+            ValueRange headerRow = sheetsClient.spreadsheets().values()
+                    .get(spreadsheetId, "1:1").execute();
+            List<List<Object>> headerValues = headerRow.getValues();
+            if (headerValues == null || headerValues.isEmpty()) return null;
+
+            List<Object> headers = headerValues.get(0);
+            int colIndex = -1;
+            for (int i = 0; i < headers.size(); i++) {
+                if (scoreColumnHeader.trim().equalsIgnoreCase(String.valueOf(headers.get(i)).trim())) {
+                    colIndex = i;
+                    break;
+                }
+            }
+            if (colIndex < 0) {
+                log.warn("[Sheets] 헤더 '{}' 를 찾을 수 없습니다: spreadsheetId={}", scoreColumnHeader, spreadsheetId);
+                return null;
+            }
+
+            String colLetter = columnIndexToLetter(colIndex);
+            ValueRange colData = sheetsClient.spreadsheets().values()
+                    .get(spreadsheetId, colLetter + "2:" + colLetter).execute();
+            List<List<Object>> rows = colData.getValues();
+            if (rows == null || rows.isEmpty()) return new int[]{0, 0, 0};
+
+            int high = 0, mid = 0, low = 0;
+            for (List<Object> row : rows) {
+                if (row.isEmpty()) continue;
+                try {
+                    double val = Double.parseDouble(String.valueOf(row.get(0)).trim());
+                    if (val >= 9) high++;
+                    else if (val >= 7) mid++;
+                    else low++;
+                } catch (NumberFormatException ignored) {}
+            }
+
+            distCache.put(cacheKey, new long[]{high, mid, low, System.currentTimeMillis() + CACHE_TTL_MS});
+            log.info("[Sheets] 점수 분포 조회: spreadsheetId={}, high={}, mid={}, low={}", spreadsheetId, high, mid, low);
+            return new int[]{high, mid, low};
+
+        } catch (Exception e) {
+            log.error("[Sheets] 점수 분포 조회 실패: spreadsheetId={}, error={}", spreadsheetId, e.getMessage());
+            return null;
+        }
+    }
+
     /** 특정 스프레드시트의 캐시를 강제 무효화합니다. */
     public void invalidateCache(String spreadsheetId) {
         cache.remove(spreadsheetId);
         scoreCache.entrySet().removeIf(e -> e.getKey().startsWith(spreadsheetId + "\0"));
+        distCache.entrySet().removeIf(e -> e.getKey().startsWith(spreadsheetId + "\0"));
     }
 
     /** 0-based 컬럼 인덱스를 Sheets 컬럼 문자로 변환합니다 (0→A, 26→AA 등). */

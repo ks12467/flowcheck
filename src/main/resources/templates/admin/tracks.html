@@ -236,6 +236,26 @@
     </div>
 </div>
 
+<!-- ════════════════════════════════════════════
+     트랙 삭제 확인 모달
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteTrackModal" onclick="closeModal('deleteTrackModal', event)">
+    <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+            <h2 class="modal-title">트랙 삭제</h2>
+            <button class="modal-close" onclick="closeModal('deleteTrackModal')">×</button>
+        </div>
+        <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">
+            트랙을 삭제하시겠습니까?<br>
+            <span style="color:var(--danger);font-weight:600;">트랙에 속한 수강생과 학습 진척도도 함께 삭제됩니다.</span>
+        </p>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('deleteTrackModal')">취소</button>
+            <button class="btn btn-danger" onclick="confirmDeleteTrack()">삭제</button>
+        </div>
+    </div>
+</div>
+
 <script th:inline="javascript">
     const isAdmin = /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
 
@@ -483,10 +503,17 @@
         else { errEl.textContent = data.message || '수정에 실패했습니다.'; errEl.style.display = 'block'; }
     }
 
-    async function deleteTrack(trackId) {
-        if (!confirm('트랙을 삭제하시겠습니까?\n트랙에 속한 수강생과 학습 진척도도 함께 삭제됩니다.')) return;
-        const res  = await fetch(`/api/v1/admin/tracks/${trackId}`, {method: 'DELETE'});
+    let _deleteTrackId = null;
+
+    function deleteTrack(trackId) {
+        _deleteTrackId = trackId;
+        document.getElementById('deleteTrackModal').classList.add('open');
+    }
+
+    async function confirmDeleteTrack() {
+        const res  = await fetch(`/api/v1/admin/tracks/${_deleteTrackId}`, {method: 'DELETE'});
         const data = await res.json();
+        closeModal('deleteTrackModal');
         if (res.ok) { location.reload(); }
         else { alert(data.message || '삭제에 실패했습니다.'); }
     }

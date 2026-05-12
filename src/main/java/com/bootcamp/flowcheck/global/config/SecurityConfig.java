@@ -35,6 +35,9 @@ public class SecurityConfig {
                         // NPS 업로드 수정/삭제는 인증된 사용자 모두 허용
                         .requestMatchers(HttpMethod.PATCH,  "/api/v1/admin/nps/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/nps/**").authenticated()
+                        // 만족도 업로드 수정/삭제는 인증된 사용자 모두 허용
+                        .requestMatchers(HttpMethod.PATCH,  "/api/v1/admin/satisfaction/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/satisfaction/**").authenticated()
                         // 그 외 어드민 DELETE는 ADMIN만
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/**").hasRole("ADMIN")
                         // 나머지는 인증된 사용자 모두 허용

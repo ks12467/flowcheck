@@ -24,6 +24,9 @@ public enum ErrorCode {
     NPS_PARSE_ERROR(400, "엑셀 파일을 파싱할 수 없습니다."),
     NPS_UPLOAD_NOT_FOUND(404, "해당 업로드 데이터를 찾을 수 없습니다."),
     NPS_DUPLICATE_UPLOAD_NAME(409, "이미 존재하는 업로드 이름입니다."),
+    SATISFACTION_PARSE_ERROR(400, "만족도 엑셀 파일을 파싱할 수 없습니다."),
+    SATISFACTION_UPLOAD_NOT_FOUND(404, "해당 만족도 업로드 데이터를 찾을 수 없습니다."),
+    SATISFACTION_DUPLICATE_UPLOAD_NAME(409, "이미 존재하는 만족도 업로드 이름입니다."),
     INTERNAL_ERROR(500, "서버 내부 오류가 발생했습니다.");
 
     private final int status;

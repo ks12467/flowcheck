@@ -106,6 +106,7 @@ public class WebController {
             Map<String, Object> stat = new LinkedHashMap<>();
             stat.put("trackId", t.getId());
             stat.put("trackName", t.getName());
+            stat.put("courseType", t.getCourseType());
             stat.put("totalStudents", studentRepository.countByTrack_Id(t.getId()));
             stat.put("todayCount", progressRepository.countTodaySubmissionsByTrackId(t.getId(), startOfDay));
             return stat;
@@ -258,8 +259,7 @@ public class WebController {
     // ── 어드민: 수강생 관리 ──────────────────────────────────────────────────
 
     @GetMapping("/admin/students")
-    public String adminStudents(Model model) {
-        model.addAttribute("allTracks", trackRepository.findAll());
+    public String adminStudents() {
         return "admin/students";
     }
 
@@ -271,15 +271,18 @@ public class WebController {
     }
 
     @GetMapping("/admin/forms")
-    public String adminForms(Model model) {
-        model.addAttribute("allTracks", trackRepository.findAll());
+    public String adminForms() {
         return "admin/forms";
     }
 
     @GetMapping("/admin/nps")
-    public String adminNps(Model model) {
-        model.addAttribute("allTracks", trackRepository.findAll());
+    public String adminNps() {
         return "admin/nps";
+    }
+
+    @GetMapping("/admin/satisfaction")
+    public String adminSatisfaction() {
+        return "admin/satisfaction";
     }
 
     // ── 진척도 제출 폼 (인증 불필요) ─────────────────────────────────────────

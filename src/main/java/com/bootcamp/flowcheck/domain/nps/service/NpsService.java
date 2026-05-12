@@ -157,6 +157,27 @@ public class NpsService {
                 .filter(Objects::nonNull)
                 .toList();
 
+        // ── 코멘트 수집 ────────────────────────────────
+        List<String> npsComments = results.stream()
+                .map(NpsResult::getNpsComment)
+                .filter(c -> c != null && !c.isBlank())
+                .toList();
+        List<String> opsComments = results.stream()
+                .map(NpsResult::getOpsComment)
+                .filter(c -> c != null && !c.isBlank())
+                .toList();
+
+        // ── 수강생 전체 상세 (팝업용) ───────────────────
+        List<NpsAnalysisResponse.StudentDetail> studentDetails = results.stream()
+                .map(r -> new NpsAnalysisResponse.StudentDetail(
+                        r.getName(),
+                        r.getDifficulty(), r.getSkill(), r.getGrowth(),
+                        r.getCommunication(), r.getImmersion(),
+                        r.getOpsSatisfaction(), r.getCurriculumSatisfaction(),
+                        r.getNps(),
+                        r.getOpsComment(), r.getNpsComment()))
+                .toList();
+
         return NpsAnalysisResponse.builder()
                 .hasData(true)
                 .totalCount(total)
@@ -179,6 +200,9 @@ public class NpsService {
                 .promoterList(promoterList)
                 .detractorList(detractorList)
                 .lowScoreStudents(lowScoreStudents)
+                .npsComments(npsComments)
+                .opsComments(opsComments)
+                .studentDetails(studentDetails)
                 .build();
     }
 
@@ -208,11 +232,11 @@ public class NpsService {
                         .communication(getCellInt(row, 6))
                         .immersion(getCellInt(row, 7))
                         .opsSatisfaction(getCellInt(row, 8))
-                        // col 9: 운영 만족도 코멘트 (저장 제외)
+                        .opsComment(getCellString(row, 9))
                         .curriculumSatisfaction(getCellInt(row, 10))
                         // col 11: 커리큘럼 만족도 코멘트 (저장 제외)
                         .nps(getCellInt(row, 12))
-                        // col 13: NPS 코멘트 (저장 제외)
+                        .npsComment(getCellString(row, 13))
                         .uploadedAt(now)
                         .uploadName(uploadName)
                         .build());

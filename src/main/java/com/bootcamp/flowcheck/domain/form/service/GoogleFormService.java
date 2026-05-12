@@ -91,4 +91,13 @@ public class GoogleFormService {
         if (form.getSpreadsheetId() == null || form.getScoreColumnHeader() == null) return -1;
         return googleSheetsService.getAverageScore(form.getSpreadsheetId(), form.getScoreColumnHeader());
     }
+
+    /** @return int[]{highCount(9~10), midCount(7~8), lowCount(0~6)}, scoreColumnHeader 없거나 오류 시 null */
+    @Transactional(readOnly = true)
+    public int[] getScoreDistribution(Long formId) {
+        GoogleForm form = googleFormRepository.findById(formId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GOOGLE_FORM_NOT_FOUND));
+        if (form.getSpreadsheetId() == null || form.getScoreColumnHeader() == null) return null;
+        return googleSheetsService.getScoreDistribution(form.getSpreadsheetId(), form.getScoreColumnHeader());
+    }
 }

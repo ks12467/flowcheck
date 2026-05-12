@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script th:src="@{/js/track-selector.js}"></script>
 </head>
 
 <!-- 상단 네비게이션 바 프래그먼트 -->
@@ -35,7 +36,8 @@
                     <li><a th:href="@{/admin/pms}"      class="topnav-subitem">PM 관리</a></li>
                     <li><a th:href="@{/admin/students}" class="topnav-subitem">수강생 관리</a></li>
                     <li><a th:href="@{/admin/forms}"    class="topnav-subitem">구글폼 관리</a></li>
-                    <li><a th:href="@{/admin/nps}"      class="topnav-subitem">NPS 분석</a></li>
+                    <li><a th:href="@{/admin/nps}"          class="topnav-subitem">NPS 분석</a></li>
+                    <li><a th:href="@{/admin/satisfaction}" class="topnav-subitem">만족도 분석</a></li>
                 </ul>
             </li>
 
@@ -74,7 +76,8 @@
             <li><a th:href="@{/admin/pms}"      class="topnav-drawer-item topnav-drawer-sub">PM 관리</a></li>
             <li><a th:href="@{/admin/students}" class="topnav-drawer-item topnav-drawer-sub">수강생 관리</a></li>
             <li><a th:href="@{/admin/forms}"    class="topnav-drawer-item topnav-drawer-sub">구글폼 관리</a></li>
-            <li><a th:href="@{/admin/nps}"      class="topnav-drawer-item topnav-drawer-sub">NPS 분석</a></li>
+            <li><a th:href="@{/admin/nps}"          class="topnav-drawer-item topnav-drawer-sub">NPS 분석</a></li>
+            <li><a th:href="@{/admin/satisfaction}" class="topnav-drawer-item topnav-drawer-sub">만족도 분석</a></li>
             <li th:if="${pm != null and pm.role == 'ADMIN'}">
                 <a th:href="@{/admin/deleted}" class="topnav-drawer-item">삭제 데이터</a>
             </li>
@@ -100,7 +103,7 @@
             const path = location.pathname;
 
             // ── 활성 탭 하이라이트 ──────────────────────
-            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms', '/admin/nps'];
+            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms', '/admin/nps', '/admin/satisfaction'];
             const isAdmin = adminPaths.some(p => path.startsWith(p));
 
             document.querySelectorAll('.topnav-item[href], .topnav-track[href]').forEach(el => {

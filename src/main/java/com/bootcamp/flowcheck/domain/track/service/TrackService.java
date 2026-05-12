@@ -26,6 +26,16 @@ public class TrackService {
     private final PmTrackRepository pmTrackRepository;
     private final PmRepository pmRepository;
 
+    public List<String> getCourseTypes() {
+        return trackRepository.findDistinctCourseTypes();
+    }
+
+    public List<TrackResponse> getTracksByCourseType(String courseType) {
+        return trackRepository.findAllByCourseTypeOrderByGenerationDesc(courseType).stream()
+                .map(t -> TrackResponse.of(t, 0))
+                .toList();
+    }
+
     public List<TrackResponse> getMyTracks() {
         Long pmId = getCurrentPmId();
         return trackRepository.findAllByPmId(pmId).stream()

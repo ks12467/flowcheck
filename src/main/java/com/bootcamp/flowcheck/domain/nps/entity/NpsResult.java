@@ -44,6 +44,12 @@ public class NpsResult {
 
     private Integer nps;
 
+    @Column(name = "nps_comment", length = 2000)
+    private String npsComment;
+
+    @Column(name = "ops_comment", length = 2000)
+    private String opsComment;
+
     @Column(name = "uploaded_at", updatable = false)
     private LocalDateTime uploadedAt;
 
@@ -55,7 +61,8 @@ public class NpsResult {
                      Integer difficulty, Integer skill, Integer growth,
                      Integer communication, Integer immersion,
                      Integer opsSatisfaction, Integer curriculumSatisfaction,
-                     Integer nps, LocalDateTime uploadedAt, String uploadName) {
+                     Integer nps, String npsComment, String opsComment,
+                     LocalDateTime uploadedAt, String uploadName) {
         this.track = track;
         this.name = name;
         this.className = className;
@@ -68,6 +75,8 @@ public class NpsResult {
         this.opsSatisfaction = opsSatisfaction;
         this.curriculumSatisfaction = curriculumSatisfaction;
         this.nps = nps;
+        this.npsComment = npsComment;
+        this.opsComment = opsComment;
         this.uploadedAt = uploadedAt;
         this.uploadName = uploadName;
     }

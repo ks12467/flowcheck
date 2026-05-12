@@ -67,10 +67,8 @@
         </div>
         <div class="form-group">
             <label class="form-label">트랙 <span class="text-danger">*</span></label>
-            <select class="form-control" id="createTrackId">
-                <option value="">트랙 선택</option>
-                <option th:each="t : ${allTracks}" th:value="${t.id}" th:text="${t.name}">트랙명</option>
-            </select>
+            <div id="createTrackSelector"></div>
+            <input type="hidden" id="createTrackId">
         </div>
         <div class="form-group">
             <label class="form-label">구글폼 URL <span class="text-danger">*</span></label>
@@ -123,10 +121,8 @@
         </div>
         <div class="form-group">
             <label class="form-label">트랙 <span class="text-danger">*</span></label>
-            <select class="form-control" id="editTrackId">
-                <option value="">트랙 선택</option>
-                <option th:each="t : ${allTracks}" th:value="${t.id}" th:text="${t.name}">트랙명</option>
-            </select>
+            <div id="editTrackSelector"></div>
+            <input type="hidden" id="editTrackId">
         </div>
         <div class="form-group">
             <label class="form-label">구글폼 URL <span class="text-danger">*</span></label>
@@ -164,6 +160,36 @@
 <script>
     // ── 서비스 계정 이메일 (전역) ──────────────────
     let _serviceAccountEmail = '';
+
+    // trackId → courseType 역방향 맵 (edit modal pre-selection 용)
+    const _trackCourseTypeMap = {};
+
+    // ── TrackSelector 초기화 ──────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+        const courseTypes = await fetchCourseTypes();
+        for (const ct of courseTypes) {
+            const tracks = await fetchTracksByCourseType(ct);
+            tracks.forEach(t => { _trackCourseTypeMap[String(t.trackId)] = ct; });
+        }
+
+        // 등록 모달 selector
+        initTrackSelector({
+            container: document.getElementById('createTrackSelector'),
+            idPrefix: 'form-create',
+            getCourseTypes: async () => courseTypes,
+            getTracksByCourseType: fetchTracksByCourseType,
+            onSelect(trackId) { document.getElementById('createTrackId').value = trackId; }
+        });
+
+        // 수정 모달 selector (pre-selection은 openEditModal에서 수행)
+        initTrackSelector({
+            container: document.getElementById('editTrackSelector'),
+            idPrefix: 'form-edit',
+            getCourseTypes: async () => courseTypes,
+            getTracksByCourseType: fetchTracksByCourseType,
+            onSelect(trackId) { document.getElementById('editTrackId').value = trackId; }
+        });
+    });
 
     async function loadServiceAccountEmail() {
         try {
@@ -271,6 +297,11 @@
         document.getElementById('createScoreColumnHeader').value = '';
         document.getElementById('createError').style.display = 'none';
         document.getElementById('createShareGuide').style.display = 'none';
+        // 선택 초기화: ts-radio 모두 해제, ts-track-row 숨김
+        document.querySelectorAll('#createTrackSelector [data-ts-radio]').forEach(r => r.checked = false);
+        document.querySelectorAll('#createTrackSelector [data-ts-label]').forEach(l => l.classList.remove('ts-pill-active'));
+        const row = document.querySelector('#createTrackSelector .ts-track-row');
+        if (row) row.style.display = 'none';
         document.getElementById('createModal').classList.add('open');
     }
 
@@ -312,6 +343,14 @@
         // 스프레드시트 ID가 있으면 공유 안내 즉시 표시
         const guide = document.getElementById('editShareGuide');
         guide.style.display = (spreadsheetId && _serviceAccountEmail) ? 'block' : 'none';
+        // 트랙 selector 사전 선택
+        const courseType = _trackCourseTypeMap[String(trackId)];
+        if (courseType) {
+            preselectTrackSelector(
+                document.getElementById('editTrackSelector'),
+                courseType, trackId, fetchTracksByCourseType
+            );
+        }
         document.getElementById('editModal').classList.add('open');
     }
 

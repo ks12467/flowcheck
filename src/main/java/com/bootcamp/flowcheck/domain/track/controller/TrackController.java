@@ -18,6 +18,16 @@ public class TrackController {
 
     private final TrackService trackService;
 
+    @GetMapping("/course-types")
+    public ResponseEntity<ApiResponse<List<String>>> getCourseTypes() {
+        return ResponseEntity.ok(ApiResponse.success(trackService.getCourseTypes(), "코스 타입 목록을 조회했습니다."));
+    }
+
+    @GetMapping("/by-course-type")
+    public ResponseEntity<ApiResponse<List<TrackResponse>>> getTracksByCourseType(@RequestParam String courseType) {
+        return ResponseEntity.ok(ApiResponse.success(trackService.getTracksByCourseType(courseType), "트랙 목록을 조회했습니다."));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<TrackResponse>>> getMyTracks() {
         return ResponseEntity.ok(ApiResponse.success(trackService.getMyTracks(), "트랙 목록을 조회했습니다."));

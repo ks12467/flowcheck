@@ -11,14 +11,8 @@
 
         <!-- 트랙 선택 -->
         <div class="card" style="padding:16px 24px;">
+            <div id="trackSelectorContainer" style="margin-bottom:12px;"></div>
             <div class="flex gap-8">
-                <select class="form-control" id="trackSelect" style="max-width:280px;"
-                        onchange="loadStudents()">
-                    <option value="">트랙을 선택하세요</option>
-                    <option th:each="t : ${allTracks}"
-                            th:value="${t.id}"
-                            th:text="${t.name}">트랙명</option>
-                </select>
                 <button class="btn btn-primary" onclick="openAddModal()" id="btnAdd" disabled>+ 수강생 등록</button>
                 <button class="btn btn-outline" onclick="openBulkModal()" id="btnBulk" disabled>일괄 등록</button>
             </div>
@@ -106,6 +100,24 @@
     </div>
 </div>
 
+<!-- 수강생 삭제 확인 모달 -->
+<div class="modal-overlay" id="deleteStudentModal" onclick="closeModal('deleteStudentModal', event)">
+    <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+            <h2 class="modal-title">수강생 삭제</h2>
+            <button class="modal-close" onclick="closeModal('deleteStudentModal')">×</button>
+        </div>
+        <p style="margin-bottom:16px;font-size:14px;line-height:1.6;">
+            <strong id="deleteStudentName"></strong> 수강생을 삭제하시겠습니까?<br>
+            <span style="color:var(--danger);font-weight:600;">관련 학습 진척도도 함께 삭제됩니다.</span>
+        </p>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('deleteStudentModal')">취소</button>
+            <button class="btn btn-danger" onclick="confirmDeleteStudent()">삭제</button>
+        </div>
+    </div>
+</div>
+
 <!-- 일괄 등록 모달 -->
 <div class="modal-overlay" id="bulkModal" onclick="closeModal('bulkModal', event)">
     <div class="modal modal-lg">
@@ -133,10 +145,22 @@
     const isAdmin = /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
     let currentTrackId = null;
 
-    // ── 트랙 선택 & 목록 로드 ──────────────────────
+    // ── TrackSelector 초기화 ──────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        initTrackSelector({
+            container: document.getElementById('trackSelectorContainer'),
+            idPrefix: 'students',
+            getCourseTypes: fetchCourseTypes,
+            getTracksByCourseType: fetchTracksByCourseType,
+            onSelect(trackId) {
+                currentTrackId = trackId || null;
+                loadStudents();
+            }
+        });
+    });
+
+    // ── 수강생 목록 로드 ────────────────────────────
     async function loadStudents() {
-        const sel = document.getElementById('trackSelect');
-        currentTrackId = sel.value || null;
         const btnAdd  = document.getElementById('btnAdd');
         const btnBulk = document.getElementById('btnBulk');
 
@@ -173,7 +197,7 @@
                     <button class="btn btn-outline" style="padding:4px 10px;font-size:12px;"
                             onclick="openEditModal(${s.studentId},'${esc(s.name)}','${esc(s.email||'')}','${esc(s.phone||'')}')">수정</button>
                     ${isAdmin ? `<button class="btn btn-danger" style="padding:4px 10px;font-size:12px;margin-left:4px;"
-                            onclick="deleteStudent(${s.studentId})">삭제</button>` : ''}
+                            onclick="deleteStudent(${s.studentId},'${esc(s.name)}')">삭제</button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -266,10 +290,18 @@
     }
 
     // ── 수강생 삭제 ────────────────────────────────
-    async function deleteStudent(studentId) {
-        if (!confirm('수강생을 삭제하시겠습니까? 관련 학습 진척도도 함께 삭제됩니다.')) return;
-        const res = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students/${studentId}`, {method: 'DELETE'});
+    let _deleteStudentId = null;
+
+    function deleteStudent(studentId, name) {
+        _deleteStudentId = studentId;
+        document.getElementById('deleteStudentName').textContent = name || '';
+        document.getElementById('deleteStudentModal').classList.add('open');
+    }
+
+    async function confirmDeleteStudent() {
+        const res = await fetch(`/api/v1/admin/tracks/${currentTrackId}/students/${_deleteStudentId}`, {method: 'DELETE'});
         const data = await res.json();
+        closeModal('deleteStudentModal');
         if (res.ok) {
             loadStudents();
         } else {

@@ -14,12 +14,9 @@
         <div class="card">
             <div class="card-title">📤 데이터 업로드</div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-                <div class="form-group" style="margin-bottom:0;min-width:200px;">
+                <div class="form-group" style="margin-bottom:0;flex:1;min-width:260px;">
                     <label class="form-label">트랙 선택</label>
-                    <select class="form-control" id="trackSelect" onchange="onTrackChange()">
-                        <option value="">트랙을 선택하세요</option>
-                        <option th:each="t : ${allTracks}" th:value="${t.id}" th:text="${t.name}">트랙명</option>
-                    </select>
+                    <div id="trackSelectorContainer"></div>
                 </div>
                 <div class="form-group" style="margin-bottom:0;min-width:160px;">
                     <label class="form-label">업로드 이름 <span style="color:var(--danger);">*</span></label>
@@ -51,6 +48,23 @@
                 <div style="display:flex;justify-content:flex-end;gap:8px;">
                     <button class="btn btn-secondary" onclick="closeDeleteModal()">취소</button>
                     <button class="btn btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()">삭제</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 수강생 상세 팝업 ──────────────────────────── -->
+        <div id="studentDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border-radius:var(--radius);padding:0;min-width:360px;max-width:560px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.22);max-height:90vh;overflow-y:auto;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);">
+                    <div id="sdName" style="font-size:16px;font-weight:700;"></div>
+                    <button onclick="closeStudentDetail()" style="border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--text-muted);line-height:1;padding:0 4px;">×</button>
+                </div>
+                <div style="padding:16px 20px;">
+                    <!-- 점수 그리드 -->
+                    <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;letter-spacing:.3px;">📊 항목별 점수</div>
+                    <div id="sdScoreGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;"></div>
+                    <!-- 코멘트 -->
+                    <div id="sdComments"></div>
                 </div>
             </div>
         </div>
@@ -103,14 +117,14 @@
             <!-- 항목별 평균 -->
             <div class="card">
                 <div class="card-title">📊 항목별 평균</div>
-                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;" id="avgGrid" class="nps-avg-grid"></div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;" id="avgGrid" class="nps-avg-grid"></div>
             </div>
 
             <!-- 상승/하락 인원 테이블 -->
             <div class="grid-2" style="gap:16px;margin-bottom:20px;">
                 <div class="card" style="margin-bottom:0;">
                     <div class="card-title" style="color:var(--success);">👍 추천 인원 <span id="promoterCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
-                    <div class="table-wrap">
+                    <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
                         <table>
                             <thead>
                                 <tr><th>이름</th><th style="text-align:center;">NPS</th></tr>
@@ -123,7 +137,7 @@
                 </div>
                 <div class="card" style="margin-bottom:0;">
                     <div class="card-title" style="color:var(--danger);">👎 비추천 인원 <span id="detractorCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
-                    <div class="table-wrap">
+                    <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
                         <table>
                             <thead>
                                 <tr><th>이름</th><th style="text-align:center;">NPS</th></tr>
@@ -139,7 +153,7 @@
             <!-- 6점 이하 수강생 -->
             <div class="card">
                 <div class="card-title" style="color:var(--warning);">⚠️ 6점 이하 수강생 <span id="lowScoreCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
-                <div class="table-wrap">
+                <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
                     <table>
                         <thead>
                             <tr><th style="width:140px;">이름</th><th>해당 항목 (점수)</th></tr>
@@ -148,6 +162,22 @@
                             <tr><td colspan="2" style="text-align:center;color:var(--text-muted);">데이터 없음</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- 코멘트 섹션 -->
+            <div class="grid-2" style="gap:16px;margin-bottom:20px;">
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">💬 NPS 코멘트 <span id="npsCommentCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div id="npsCommentList" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
+                        <p style="color:var(--text-muted);font-size:13px;">코멘트 없음</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">📋 운영 코멘트 <span id="opsCommentCount" style="font-size:13px;font-weight:400;color:var(--text-muted);"></span></div>
+                    <div id="opsCommentList" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;">
+                        <p style="color:var(--text-muted);font-size:13px;">코멘트 없음</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -257,9 +287,19 @@
         line-height: 1;
     }
     .tab-edit-btn:hover { background: var(--border); }
+    /* 이름 링크 */
+    .student-name-link {
+        cursor: pointer;
+        color: var(--primary);
+        font-weight: 600;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+    }
+    .student-name-link:hover { opacity: .8; }
     /* 반응형: 3열 이하 */
     @media (max-width: 900px) {
-        #avgGrid { grid-template-columns: repeat(4, 1fr) !important; }
+        #avgGrid { grid-template-columns: repeat(3, 1fr) !important; }
     }
     @media (max-width: 600px) {
         #avgGrid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -268,21 +308,35 @@
 
 <script>
     const AVG_ITEMS = [
-        { key: 'avgDifficulty',            label: '난이도' },
-        { key: 'avgSkill',                 label: '실력' },
-        { key: 'avgGrowth',                label: '성장' },
-        { key: 'avgCommunication',         label: '소통' },
-        { key: 'avgImmersion',             label: '몰입' },
-        { key: 'avgOpsSatisfaction',       label: '운영 만족도' },
-        { key: 'avgCurriculumSatisfaction',label: '커리큘럼 만족도' },
+        { key: 'avgDifficulty',      label: '난이도' },
+        { key: 'avgSkill',           label: '실력' },
+        { key: 'avgGrowth',          label: '성장' },
+        { key: 'avgCommunication',   label: '소통' },
+        { key: 'avgImmersion',       label: '몰입' },
+        { key: 'avgOpsSatisfaction', label: '운영 만족도' },
     ];
 
+    let currentTrackId   = null;
     let activeUploadName = null;
     let pendingDeleteName = null;
 
+    // ── TrackSelector 초기화 ──────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        initTrackSelector({
+            container: document.getElementById('trackSelectorContainer'),
+            idPrefix: 'nps',
+            getCourseTypes: fetchCourseTypes,
+            getTracksByCourseType: fetchTracksByCourseType,
+            onSelect(trackId) {
+                currentTrackId = trackId || null;
+                onTrackChange();
+            }
+        });
+    });
+
     // ── 트랙 변경 시 탭 목록 로드 ────────────────────
     async function onTrackChange() {
-        const trackId = document.getElementById('trackSelect').value;
+        const trackId = currentTrackId;
         clearAnalysis();
         document.getElementById('tabSection').style.display = 'none';
         document.getElementById('uploadTabs').innerHTML = '';
@@ -487,7 +541,7 @@
 
     // ── 업로드 ────────────────────────────────────────
     async function uploadNps() {
-        const trackId    = document.getElementById('trackSelect').value;
+        const trackId    = currentTrackId;
         const uploadName = document.getElementById('uploadName').value.trim();
         const file       = document.getElementById('npsFile').files[0];
         const btn        = document.getElementById('uploadBtn');
@@ -586,13 +640,17 @@
                     </div>`;
         }).join('');
 
+        // ── 수강생 상세 맵 구성 ──────────────────────
+        _studentDetailMap = {};
+        (d.studentDetails || []).forEach(s => { _studentDetailMap[s.name] = s; });
+
         // ── 추천/비추천 테이블 ───────────────────────
         document.getElementById('promoterCount').textContent = `(${d.promoters}명)`;
         document.getElementById('detractorCount').textContent = `(${d.detractors}명)`;
 
         document.getElementById('promoterTable').innerHTML = d.promoterList.length
             ? d.promoterList.map(p => `<tr>
-                    <td>${esc(p.name)}</td>
+                    <td><span class="student-name-link" onclick="openStudentDetail('${esc(p.name)}')">${esc(p.name)}</span></td>
                     <td style="text-align:center;">
                         <span class="badge badge-success">${p.nps}점</span>
                     </td>
@@ -601,7 +659,7 @@
 
         document.getElementById('detractorTable').innerHTML = d.detractorList.length
             ? d.detractorList.map(p => `<tr>
-                    <td>${esc(p.name)}</td>
+                    <td><span class="student-name-link" onclick="openStudentDetail('${esc(p.name)}')">${esc(p.name)}</span></td>
                     <td style="text-align:center;">
                         <span class="badge badge-danger">${p.nps}점</span>
                     </td>
@@ -612,13 +670,85 @@
         document.getElementById('lowScoreCount').textContent = `(${d.lowScoreStudents.length}명)`;
         document.getElementById('lowScoreTable').innerHTML = d.lowScoreStudents.length
             ? d.lowScoreStudents.map(s => `<tr>
-                    <td style="font-weight:600;">${esc(s.name)}</td>
+                    <td><span class="student-name-link" onclick="openStudentDetail('${esc(s.name)}')">${esc(s.name)}</span></td>
                     <td>${s.lowItems.map(item =>
                         `<span class="badge badge-warning" style="margin:2px;">${esc(item)}</span>`
                     ).join(' ')}</td>
                 </tr>`).join('')
             : '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">6점 이하 항목 없음</td></tr>';
+
+        // ── 코멘트 ────────────────────────────────────
+        renderComments('npsCommentList', 'npsCommentCount', d.npsComments);
+        renderComments('opsCommentList', 'opsCommentCount', d.opsComments);
     }
+
+    function renderComments(listId, countId, comments) {
+        const list = comments ?? [];
+        document.getElementById(countId).textContent = `(${list.length}건)`;
+        document.getElementById(listId).innerHTML = list.length
+            ? list.map(c => `<div style="background:var(--bg);border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.6;border-left:3px solid var(--primary);">${esc(c)}</div>`).join('')
+            : '<p style="color:var(--text-muted);font-size:13px;">코멘트 없음</p>';
+    }
+
+    // ── 수강생 상세 팝업 ──────────────────────────────
+    let _studentDetailMap = {};
+
+    const SD_SCORES = [
+        { key: 'difficulty',          label: '난이도' },
+        { key: 'skill',               label: '실력' },
+        { key: 'growth',              label: '성장' },
+        { key: 'communication',       label: '소통' },
+        { key: 'immersion',           label: '몰입' },
+        { key: 'opsSatisfaction',     label: '운영 만족도' },
+        { key: 'curriculumSatisfaction', label: '커리큘럼 만족도' },
+        { key: 'nps',                 label: 'NPS' },
+    ];
+
+    function openStudentDetail(name) {
+        const s = _studentDetailMap[name];
+        if (!s) return;
+
+        document.getElementById('sdName').textContent = name;
+
+        // 점수 그리드
+        document.getElementById('sdScoreGrid').innerHTML = SD_SCORES.map(item => {
+            const val = s[item.key];
+            const display = val != null ? val : '-';
+            const cls = val == null ? 'score-ok'
+                : val >= 8 ? 'score-good'
+                : val >= 6 ? 'score-ok'
+                : 'score-low';
+            return `<div class="nps-avg-card">
+                        <div class="nps-avg-label">${item.label}</div>
+                        <div class="nps-avg-score ${cls}">${display}</div>
+                    </div>`;
+        }).join('');
+
+        // 코멘트
+        const commentBlocks = [
+            { label: '운영 만족도 코멘트', value: s.opsComment },
+            { label: 'NPS 코멘트',        value: s.npsComment },
+        ].filter(c => c.value);
+
+        document.getElementById('sdComments').innerHTML = commentBlocks.length
+            ? commentBlocks.map(c => `
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;letter-spacing:.3px;">${esc(c.label)}</div>
+                    <div style="background:var(--bg);border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.6;border-left:3px solid var(--primary);">${esc(c.value)}</div>
+                </div>`).join('')
+            : '<p style="color:var(--text-muted);font-size:13px;margin:0;">작성된 코멘트 없음</p>';
+
+        const modal = document.getElementById('studentDetailModal');
+        modal.style.display = 'flex';
+    }
+
+    function closeStudentDetail() {
+        document.getElementById('studentDetailModal').style.display = 'none';
+    }
+
+    document.getElementById('studentDetailModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('studentDetailModal')) closeStudentDetail();
+    });
 
     function setBar(prefix, count, pct) {
         document.getElementById(prefix + 'Stat').textContent = count + '명 (' + pct.toFixed(1) + '%)';
