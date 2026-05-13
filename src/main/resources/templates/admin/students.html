@@ -143,6 +143,8 @@
 
 <script th:inline="javascript">
     const isAdmin = /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
+    const preselectedTrackId   = /*[[${preselectedTrackId}]]*/ null;
+    const preselectedCourseType = /*[[${preselectedCourseType}]]*/ null;
     let currentTrackId = null;
 
     // ── TrackSelector 초기화 ──────────────────────
@@ -152,6 +154,9 @@
             idPrefix: 'students',
             getCourseTypes: fetchCourseTypes,
             getTracksByCourseType: fetchTracksByCourseType,
+            initialCourseType: preselectedCourseType,
+            initialTrackId: preselectedTrackId,
+            triggerOnInit: !!preselectedTrackId,
             onSelect(trackId) {
                 currentTrackId = trackId || null;
                 loadStudents();

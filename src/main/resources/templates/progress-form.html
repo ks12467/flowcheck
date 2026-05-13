@@ -79,24 +79,32 @@
         </div>
     </div>
 
-    <!-- 학습 난이도 -->
-    <div class="form-card" style="border-radius:12px;margin-top:12px;">
-        <label class="form-label">오늘 학습 난이도 <span style="color:#DC3545">*</span></label>
-        <p class="text-muted" style="font-size:12px;margin-bottom:12px;">1 = 매우 쉬움 &nbsp;|&nbsp; 5 = 매우 어려움</p>
-        <div class="score-buttons">
-            <button type="button" class="score-btn" data-score="1">😊 1</button>
-            <button type="button" class="score-btn" data-score="2">🙂 2</button>
-            <button type="button" class="score-btn" data-score="3">😐 3</button>
-            <button type="button" class="score-btn" data-score="4">😟 4</button>
-            <button type="button" class="score-btn" data-score="5">😭 5</button>
+    <!-- 동적 설문 문항 -->
+    <div th:each="q, qStat : ${questions}" class="form-card" style="border-radius:12px;margin-top:12px;">
+        <!-- SCORE 타입 -->
+        <div th:if="${q.questionType == 'SCORE'}">
+            <label class="form-label">
+                <span th:text="${q.questionText}">문항</span>
+                <span th:if="${qStat.first}" style="color:#DC3545"> *</span>
+            </label>
+            <p class="text-muted" style="font-size:12px;margin-bottom:12px;">
+                <span th:text="${q.minScore}">1</span> = 매우 쉬움 &nbsp;|&nbsp;
+                <span th:text="${q.maxScore}">5</span> = 매우 어려움
+            </p>
+            <div class="score-buttons" th:id="'score-group-' + ${q.id}">
+                <button th:each="i : ${#numbers.sequence(q.minScore, q.maxScore)}"
+                        type="button" class="score-btn-q"
+                        th:attr="data-qid=${q.id}, data-score=${i}, data-primary=${qStat.first ? 'true' : 'false'}"
+                        th:text="${i == 1 ? '😊 1' : i == 2 ? '🙂 2' : i == 3 ? '😐 3' : i == 4 ? '😟 4' : i == 5 ? '😭 5' : i}">
+                </button>
+            </div>
         </div>
-    </div>
-
-    <!-- 코멘트 -->
-    <div class="form-card" style="border-radius:12px;margin-top:12px;">
-        <label class="form-label">코멘트</label>
-        <textarea id="comment" class="form-control" rows="4"
-                  placeholder="어려웠던 점이나 하고 싶은 말을 자유롭게 작성해주세요."></textarea>
+        <!-- TEXT 타입 -->
+        <div th:if="${q.questionType == 'TEXT'}">
+            <label class="form-label" th:text="${q.questionText}">문항</label>
+            <textarea th:id="'text-q-' + ${q.id}" class="form-control survey-text-q"
+                      rows="4" placeholder="자유롭게 작성해주세요."></textarea>
+        </div>
     </div>
 
     <!-- 제출 버튼 -->
@@ -137,11 +145,12 @@
     </div>
 </div>
 
-<!-- 강의 데이터를 JSON으로 전달 -->
+<!-- 강의 / 설문 데이터를 JSON으로 전달 -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script th:inline="javascript">
-    const coursesData = /*[[${courses}]]*/ [];
+    const coursesData      = /*[[${courses}]]*/ [];
+    const surveyQuestions  = /*[[${questions}]]*/ [];
 </script>
 <script th:src="@{/js/progress-form.js}"></script>
 </body>

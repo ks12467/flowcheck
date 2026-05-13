@@ -13,7 +13,8 @@
  */
 function initTrackSelector(options) {
     const { container, idPrefix, getCourseTypes, getTracksByCourseType, onSelect,
-            compact = false, initialCourseType = null, initialTrackId = null } = options;
+            compact = false, initialCourseType = null, initialTrackId = null,
+            triggerOnInit = false } = options;
 
     let allTracks = [];
 
@@ -87,7 +88,7 @@ function initTrackSelector(options) {
                 loadCourseType(initialCourseType).then(() => {
                     if (initialTrackId) {
                         trackSelect.value = String(initialTrackId);
-                        // 선택 상태이지만 onSelect는 호출하지 않음 (초기화이므로)
+                        if (triggerOnInit) onSelect(String(initialTrackId));
                     }
                 });
             }

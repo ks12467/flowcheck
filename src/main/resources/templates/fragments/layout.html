@@ -26,18 +26,14 @@
                 <a th:href="@{/dashboard}" class="topnav-item">대시보드</a>
             </li>
 
-            <!-- 운영 관리 드롭다운 -->
+            <!-- 운영 관리 드롭다운 (트랙 관리 / PM 관리만) -->
             <li class="topnav-dropdown">
                 <button type="button" class="topnav-item topnav-dropdown-btn">
                     운영 관리 <span class="topnav-arrow">▾</span>
                 </button>
                 <ul class="topnav-submenu">
-                    <li><a th:href="@{/admin/tracks}"   class="topnav-subitem">트랙 관리</a></li>
-                    <li><a th:href="@{/admin/pms}"      class="topnav-subitem">PM 관리</a></li>
-                    <li><a th:href="@{/admin/students}" class="topnav-subitem">수강생 관리</a></li>
-                    <li><a th:href="@{/admin/forms}"    class="topnav-subitem">구글폼 관리</a></li>
-                    <li><a th:href="@{/admin/nps}"          class="topnav-subitem">NPS 분석</a></li>
-                    <li><a th:href="@{/admin/satisfaction}" class="topnav-subitem">만족도 분석</a></li>
+                    <li><a th:href="@{/admin/tracks}" class="topnav-subitem">트랙 관리</a></li>
+                    <li><a th:href="@{/admin/pms}"    class="topnav-subitem">PM 관리</a></li>
                 </ul>
             </li>
 
@@ -46,13 +42,20 @@
                 <a th:href="@{/admin/deleted}" class="topnav-item">삭제 데이터</a>
             </li>
 
-            <!-- 내 트랙 -->
+            <!-- 배정된 트랙별 드롭다운 -->
             <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
                 <li class="topnav-divider"></li>
-                <li th:each="t : ${sidebarTracks}">
-                    <a th:href="@{/tracks/{id}/students(id=${t.id})}"
-                       class="topnav-item topnav-track"
-                       th:text="${t.name}">트랙명</a>
+                <li class="topnav-dropdown" th:each="t : ${sidebarTracks}">
+                    <button type="button" class="topnav-item topnav-dropdown-btn"
+                            th:attr="data-track-id=${t.id}">
+                        <span th:text="${t.name}">트랙명</span> <span class="topnav-arrow">▾</span>
+                    </button>
+                    <ul class="topnav-submenu">
+                        <li><a th:href="@{/admin/students(trackId=${t.id})}"    class="topnav-subitem">수강생 관리</a></li>
+                        <li><a th:href="@{/admin/forms(trackId=${t.id})}"       class="topnav-subitem">구글폼 관리</a></li>
+                        <li><a th:href="@{/admin/nps(trackId=${t.id})}"         class="topnav-subitem">NPS 분석</a></li>
+                        <li><a th:href="@{/admin/satisfaction(trackId=${t.id})}" class="topnav-subitem">만족도 분석</a></li>
+                    </ul>
                 </li>
             </th:block>
         </ul>
@@ -72,22 +75,19 @@
         <ul class="topnav-drawer-menu">
             <li><a th:href="@{/dashboard}" class="topnav-drawer-item">대시보드</a></li>
             <li class="topnav-drawer-section">운영 관리</li>
-            <li><a th:href="@{/admin/tracks}"   class="topnav-drawer-item topnav-drawer-sub">트랙 관리</a></li>
-            <li><a th:href="@{/admin/pms}"      class="topnav-drawer-item topnav-drawer-sub">PM 관리</a></li>
-            <li><a th:href="@{/admin/students}" class="topnav-drawer-item topnav-drawer-sub">수강생 관리</a></li>
-            <li><a th:href="@{/admin/forms}"    class="topnav-drawer-item topnav-drawer-sub">구글폼 관리</a></li>
-            <li><a th:href="@{/admin/nps}"          class="topnav-drawer-item topnav-drawer-sub">NPS 분석</a></li>
-            <li><a th:href="@{/admin/satisfaction}" class="topnav-drawer-item topnav-drawer-sub">만족도 분석</a></li>
+            <li><a th:href="@{/admin/tracks}" class="topnav-drawer-item topnav-drawer-sub">트랙 관리</a></li>
+            <li><a th:href="@{/admin/pms}"    class="topnav-drawer-item topnav-drawer-sub">PM 관리</a></li>
             <li th:if="${pm != null and pm.role == 'ADMIN'}">
                 <a th:href="@{/admin/deleted}" class="topnav-drawer-item">삭제 데이터</a>
             </li>
             <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
-                <li class="topnav-drawer-section">내 트랙</li>
-                <li th:each="t : ${sidebarTracks}">
-                    <a th:href="@{/tracks/{id}/students(id=${t.id})}"
-                       class="topnav-drawer-item"
-                       th:text="${t.name}">트랙명</a>
-                </li>
+                <th:block th:each="t : ${sidebarTracks}">
+                    <li class="topnav-drawer-section" th:text="${t.name}">트랙명</li>
+                    <li><a th:href="@{/admin/students(trackId=${t.id})}"     class="topnav-drawer-item topnav-drawer-sub">수강생 관리</a></li>
+                    <li><a th:href="@{/admin/forms(trackId=${t.id})}"        class="topnav-drawer-item topnav-drawer-sub">구글폼 관리</a></li>
+                    <li><a th:href="@{/admin/nps(trackId=${t.id})}"          class="topnav-drawer-item topnav-drawer-sub">NPS 분석</a></li>
+                    <li><a th:href="@{/admin/satisfaction(trackId=${t.id})}" class="topnav-drawer-item topnav-drawer-sub">만족도 분석</a></li>
+                </th:block>
             </th:block>
             <li th:if="${pm != null}">
                 <div class="topnav-drawer-footer">
@@ -101,12 +101,17 @@
     <script>
         (function () {
             const path = location.pathname;
+            const urlParams = new URLSearchParams(location.search);
+            const activeTrackId = urlParams.get('trackId');
 
             // ── 활성 탭 하이라이트 ──────────────────────
-            const adminPaths = ['/admin/tracks', '/admin/pms', '/admin/students', '/admin/forms', '/admin/nps', '/admin/satisfaction'];
-            const isAdmin = adminPaths.some(p => path.startsWith(p));
+            const mgmtPaths = ['/admin/tracks', '/admin/pms'];
+            const trackAdminPaths = ['/admin/students', '/admin/forms', '/admin/nps', '/admin/satisfaction'];
+            const isManagement = mgmtPaths.some(p => path.startsWith(p));
+            const isTrackAdmin = trackAdminPaths.some(p => path.startsWith(p));
 
-            document.querySelectorAll('.topnav-item[href], .topnav-track[href]').forEach(el => {
+            // 대시보드 등 일반 링크 활성화
+            document.querySelectorAll('.topnav-item[href]').forEach(el => {
                 const href = el.getAttribute('href');
                 if (!href) return;
                 if (href === '/dashboard' ? path === '/dashboard' : path.startsWith(href)) {
@@ -114,23 +119,57 @@
                 }
             });
 
+            // 서브메뉴 항목 활성화
             document.querySelectorAll('.topnav-subitem[href]').forEach(el => {
                 const href = el.getAttribute('href');
-                if (href && path.startsWith(href)) {
-                    el.classList.add('active');
+                if (!href) return;
+                const hrefPath   = href.split('?')[0];
+                const hrefSearch = href.includes('?') ? href.split('?')[1] : '';
+                const hrefTrackId = new URLSearchParams(hrefSearch).get('trackId');
+
+                if (hrefTrackId) {
+                    // 트랙별 서브메뉴: path + trackId 모두 일치할 때
+                    if (path === hrefPath && activeTrackId === hrefTrackId) {
+                        el.classList.add('active');
+                    }
+                } else {
+                    // 운영 관리 서브메뉴 (트랙ID 없는 단순 경로)
+                    if (path.startsWith(href)) {
+                        el.classList.add('active');
+                    }
                 }
             });
 
-            if (isAdmin) {
-                document.querySelector('.topnav-dropdown-btn')?.classList.add('active');
+            // 운영 관리 드롭다운 버튼 활성화
+            if (isManagement) {
+                document.querySelector('.topnav-dropdown-btn:not([data-track-id])')?.classList.add('active');
+            }
+
+            // 트랙별 드롭다운 버튼 활성화
+            if (isTrackAdmin && activeTrackId) {
+                document.querySelectorAll('.topnav-dropdown-btn[data-track-id]').forEach(btn => {
+                    if (String(btn.dataset.trackId) === activeTrackId) {
+                        btn.classList.add('active');
+                    }
+                });
             }
 
             // 드로어에서도 활성 표시
             document.querySelectorAll('.topnav-drawer-item[href]').forEach(el => {
                 const href = el.getAttribute('href');
                 if (!href) return;
-                if (href === '/dashboard' ? path === '/dashboard' : path.startsWith(href)) {
-                    el.classList.add('active');
+                const hrefPath   = href.split('?')[0];
+                const hrefSearch = href.includes('?') ? href.split('?')[1] : '';
+                const hrefTrackId = new URLSearchParams(hrefSearch).get('trackId');
+
+                if (hrefTrackId) {
+                    if (path === hrefPath && activeTrackId === hrefTrackId) {
+                        el.classList.add('active');
+                    }
+                } else {
+                    if (href === '/dashboard' ? path === '/dashboard' : path.startsWith(hrefPath)) {
+                        el.classList.add('active');
+                    }
                 }
             });
 

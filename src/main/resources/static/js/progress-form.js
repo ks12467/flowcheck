@@ -4,9 +4,25 @@
 
 const courseSelect = document.getElementById('courseSelect');
 const weekSelect   = document.getElementById('weekSelect');
-let selectedScore      = null;
+let selectedScore      = null;   // primary SCORE 문항 점수 (conditionScore)
 let selectedWeekId     = null;
 let selectedLectureNum = null;
+
+// ── 동적 설문 점수 버튼 ──────────────────────────────────────────────────────
+const questionScores = {};  // qid → selectedScore
+
+document.querySelectorAll('.score-btn-q').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const qid = this.dataset.qid;
+        document.querySelectorAll(`.score-btn-q[data-qid="${qid}"]`)
+                .forEach(b => b.classList.remove('selected'));
+        this.classList.add('selected');
+        questionScores[qid] = parseInt(this.dataset.score);
+        if (this.dataset.primary === 'true') {
+            selectedScore = questionScores[qid];
+        }
+    });
+});
 
 // 강의 선택 → 주차 드롭다운 업데이트
 courseSelect.addEventListener('change', function () {
@@ -86,25 +102,19 @@ function clearLectureButtons() {
     selectedLectureNum = null;
 }
 
-// ── 난이도 버튼 ─────────────────────────────────────────────────────────────
-
-document.querySelectorAll('.score-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-        document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
-        this.classList.add('selected');
-        selectedScore = parseInt(this.dataset.score);
-    });
-});
-
 // ── 제출 처리 ───────────────────────────────────────────────────────────────
 
 document.getElementById('submitBtn').addEventListener('click', async function () {
     const studentName = document.getElementById('studentName').value.trim();
     if (!studentName)   { alert('이름을 입력해주세요.');         return; }
     if (!selectedWeekId){ alert('주차를 선택해주세요.');         return; }
-    if (!selectedScore) { alert('학습 난이도를 선택해주세요.'); return; }
+    if (!selectedScore) { alert('첫 번째 점수 항목을 선택해주세요.'); return; }
 
     const trackId = location.pathname.split('/').pop();
+
+    // 첫 번째 TEXT 문항 값을 comment로 사용
+    const textQEl = document.querySelector('.survey-text-q');
+    const comment = textQEl ? textQEl.value.trim() || null : null;
 
     const body = {
         studentName:        studentName,
@@ -114,7 +124,7 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         assignmentProgress: parseInt(document.getElementById('assignmentRange').value),
         tilWritten:         document.getElementById('tilCheckbox').checked,
         conditionScore:     selectedScore,
-        comment:            document.getElementById('comment').value.trim() || null,
+        comment:            comment,
     };
 
     this.disabled    = true;

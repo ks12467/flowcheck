@@ -44,26 +44,34 @@
 
             <!-- 수강생 테이블 -->
             <div class="table-wrap">
-                <table>
+                <table id="studentTable">
                     <thead>
                         <tr>
-                            <th>이름</th>
+                            <th class="th-sortable" onclick="sortTable('name')" style="cursor:pointer;">
+                                이름 <span class="sort-icon" id="sort-icon-name"></span>
+                            </th>
                             <th>이메일</th>
                             <th>연락처</th>
-                            <th>위험군</th>
+                            <th class="th-sortable" onclick="sortTable('risk')" style="cursor:pointer;">
+                                위험군 <span class="sort-icon" id="sort-icon-risk"></span>
+                            </th>
                             <th>최근 난이도</th>
                             <th>최근 제출일</th>
+                            <th class="th-sortable" onclick="sortTable('today')" style="cursor:pointer;">
+                                오늘 제출 <span class="sort-icon" id="sort-icon-today"></span>
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="studentTbody">
                         <tr th:if="${#lists.isEmpty(students)}">
-                            <td colspan="6" style="text-align:center;color:#6C757D;padding:32px;">
+                            <td colspan="7" style="text-align:center;color:#6C757D;padding:32px;">
                                 수강생이 없습니다.
                             </td>
                         </tr>
                         <tr th:each="s : ${students}"
                             class="clickable"
-                            th:onclick="|location.href='/tracks/${track.id}/students/${s.studentId}'|">
+                            th:onclick="|location.href='/tracks/${track.id}/students/${s.studentId}'|"
+                            th:attr="data-name=${s.name}, data-risk=${s.riskLevel}, data-today=${s.submittedToday ? '1' : '0'}">
                             <td style="font-weight:600;" th:text="${s.name}">이름</td>
                             <td class="text-muted" th:text="${s.email ?: '-'}">이메일</td>
                             <td class="text-muted" th:text="${s.phone ?: '-'}">연락처</td>
@@ -84,10 +92,69 @@
                                       th:text="${#temporals.format(s.submittedAt, 'MM/dd HH:mm')}">날짜</span>
                                 <span th:if="${s.submittedAt == null}">-</span>
                             </td>
+                            <td style="text-align:center;font-size:16px;">
+                                <span th:if="${s.submittedToday}">✅</span>
+                                <span th:unless="${s.submittedToday}">⬜</span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+
+<style>
+.th-sortable:hover { background: var(--bg); color: var(--primary); }
+.sort-icon { font-size: 10px; color: var(--text-muted); margin-left: 2px; }
+</style>
+
+<script>
+(function () {
+    const RISK_ORDER = { '즉시면담': 1, '주의': 2, '관찰': 3, '정상': 4 };
+    const sortState = { col: null, asc: true };
+
+    window.sortTable = function (col) {
+        if (sortState.col === col) {
+            sortState.asc = !sortState.asc;
+        } else {
+            sortState.col = col;
+            sortState.asc = true;
+        }
+        updateSortIcons();
+
+        const tbody = document.getElementById('studentTbody');
+        const rows = Array.from(tbody.querySelectorAll('tr[data-name]'));
+
+        rows.sort((a, b) => {
+            let av, bv;
+            if (col === 'name') {
+                av = a.dataset.name ?? '';
+                bv = b.dataset.name ?? '';
+                return sortState.asc ? av.localeCompare(bv, 'ko') : bv.localeCompare(av, 'ko');
+            } else if (col === 'risk') {
+                av = RISK_ORDER[a.dataset.risk] ?? 5;
+                bv = RISK_ORDER[b.dataset.risk] ?? 5;
+            } else if (col === 'today') {
+                av = parseInt(a.dataset.today ?? '0');
+                bv = parseInt(b.dataset.today ?? '0');
+            }
+            return sortState.asc ? av - bv : bv - av;
+        });
+
+        rows.forEach(r => tbody.appendChild(r));
+    };
+
+    function updateSortIcons() {
+        ['name', 'risk', 'today'].forEach(c => {
+            const el = document.getElementById('sort-icon-' + c);
+            if (!el) return;
+            if (sortState.col === c) {
+                el.textContent = sortState.asc ? '▲' : '▼';
+            } else {
+                el.textContent = '';
+            }
+        });
+    }
+})();
+</script>
         </div>
     </main>
 </div>

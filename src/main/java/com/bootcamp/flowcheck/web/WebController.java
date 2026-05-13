@@ -6,6 +6,7 @@ import com.bootcamp.flowcheck.domain.course.dto.CourseResponse;
 import com.bootcamp.flowcheck.domain.course.repository.CourseRepository;
 import com.bootcamp.flowcheck.domain.form.repository.GoogleFormRepository;
 import com.bootcamp.flowcheck.domain.progress.entity.LearningProgress;
+import com.bootcamp.flowcheck.domain.survey.service.SurveyQuestionService;
 import com.bootcamp.flowcheck.domain.progress.repository.LearningProgressRepository;
 import com.bootcamp.flowcheck.domain.student.entity.Student;
 import com.bootcamp.flowcheck.domain.student.repository.StudentRepository;
@@ -45,6 +46,7 @@ public class WebController {
     private final LearningProgressRepository progressRepository;
     private final CourseRepository courseRepository;
     private final GoogleFormRepository googleFormRepository;
+    private final SurveyQuestionService surveyQuestionService;
 
     // 인증된 모든 요청에 PM 정보와 사이드바 트랙 목록을 주입
     @ModelAttribute
@@ -259,7 +261,13 @@ public class WebController {
     // ── 어드민: 수강생 관리 ──────────────────────────────────────────────────
 
     @GetMapping("/admin/students")
-    public String adminStudents() {
+    public String adminStudents(@RequestParam(required = false) Long trackId, Model model) {
+        if (trackId != null) {
+            trackRepository.findById(trackId).ifPresent(track -> {
+                model.addAttribute("preselectedTrackId", trackId);
+                model.addAttribute("preselectedCourseType", track.getCourseType());
+            });
+        }
         return "admin/students";
     }
 
@@ -271,17 +279,35 @@ public class WebController {
     }
 
     @GetMapping("/admin/forms")
-    public String adminForms() {
+    public String adminForms(@RequestParam(required = false) Long trackId, Model model) {
+        if (trackId != null) {
+            trackRepository.findById(trackId).ifPresent(track -> {
+                model.addAttribute("preselectedTrackId", trackId);
+                model.addAttribute("preselectedCourseType", track.getCourseType());
+            });
+        }
         return "admin/forms";
     }
 
     @GetMapping("/admin/nps")
-    public String adminNps() {
+    public String adminNps(@RequestParam(required = false) Long trackId, Model model) {
+        if (trackId != null) {
+            trackRepository.findById(trackId).ifPresent(track -> {
+                model.addAttribute("preselectedTrackId", trackId);
+                model.addAttribute("preselectedCourseType", track.getCourseType());
+            });
+        }
         return "admin/nps";
     }
 
     @GetMapping("/admin/satisfaction")
-    public String adminSatisfaction() {
+    public String adminSatisfaction(@RequestParam(required = false) Long trackId, Model model) {
+        if (trackId != null) {
+            trackRepository.findById(trackId).ifPresent(track -> {
+                model.addAttribute("preselectedTrackId", trackId);
+                model.addAttribute("preselectedCourseType", track.getCourseType());
+            });
+        }
         return "admin/satisfaction";
     }
 
@@ -295,6 +321,7 @@ public class WebController {
                 .stream().map(CourseResponse::of).toList();
         model.addAttribute("track", track);
         model.addAttribute("courses", courses);
+        model.addAttribute("questions", surveyQuestionService.getQuestions(trackId));
         return "progress-form";
     }
 
@@ -309,6 +336,9 @@ public class WebController {
         v.put("riskLevel", lp != null ? lp.getRiskLevel() : null);
         v.put("conditionScore", lp != null ? lp.getConditionScore() : null);
         v.put("submittedAt", lp != null ? lp.getSubmittedAt() : null);
+        boolean submittedToday = lp != null && lp.getSubmittedAt() != null
+                && lp.getSubmittedAt().toLocalDate().equals(LocalDate.now());
+        v.put("submittedToday", submittedToday);
         return v;
     }
 

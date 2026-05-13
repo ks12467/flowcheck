@@ -22,8 +22,15 @@
                      th:onclick="|location.href='/tracks/${lp.student.track.id}/students/${lp.student.id}'|">
                     <div class="urgent-card-name" th:text="${lp.student.name}">이름</div>
                     <div class="urgent-card-track" th:text="${lp.student.track.name}">트랙명</div>
-                    <div class="mt-4" style="font-size:12px;color:#DC3545;"
-                         th:text="'난이도 ' + ${lp.conditionScore} + '점'">난이도</div>
+                    <div class="mt-4" style="font-size:12px;color:#DC3545;">
+                        <span th:text="'난이도 ' + ${lp.conditionScore} + '점'">난이도</span>
+                        <span th:if="${lp.assignmentProgress != null}" th:text="' · 과제 ' + ${lp.assignmentProgress} + '%'"></span>
+                        <span th:if="${lp.tilWritten != null}" th:text="${lp.tilWritten} ? ' · TIL ✓' : ' · TIL ✗'"></span>
+                    </div>
+                    <div th:if="${lp.comment != null and !#strings.isEmpty(lp.comment)}"
+                         class="mt-4" style="font-size:11px;color:#6C757D;line-height:1.4;word-break:break-all;font-style:italic;">
+                        "<span th:text="${lp.comment}"></span>"
+                    </div>
                 </div>
             </div>
             <div class="urgent-empty" th:if="${#lists.isEmpty(urgentStudents)}">
@@ -231,9 +238,36 @@
                 <div class="survey-link-label" th:text="${stat.trackName}">트랙명</div>
                 <div class="survey-link-url"
                      th:text="${baseUrl + '/progress/' + stat.trackId}">URL</div>
+                <button class="btn btn-outline" style="font-size:12px;padding:4px 10px;white-space:nowrap;"
+                        th:attr="data-track-id=${stat.trackId}, data-track-name=${stat.trackName}, data-survey-url=${baseUrl + '/progress/' + stat.trackId}"
+                        onclick="openSurveyModal(this)">설문 확인</button>
                 <button class="btn-copy"
                         th:attr="data-url=${baseUrl + '/progress/' + stat.trackId}"
                         onclick="copyLink(this)">복사</button>
+            </div>
+        </div>
+
+        <!-- ── 설문 문항 관리 모달 ──────────────────────────────── -->
+        <div id="surveyModal" class="modal-overlay">
+            <div class="modal modal-lg" style="max-width:560px;display:flex;flex-direction:column;max-height:90vh;">
+                <div class="modal-header">
+                    <span class="modal-title">📋 설문 문항 — <span id="surveyModalTrackName"></span></span>
+                    <button class="modal-close" onclick="closeSurveyModal()">×</button>
+                </div>
+                <div id="surveyModalBody" style="padding:16px 20px;overflow-y:auto;flex:1;">
+                    <div id="surveyLoadingMsg" class="text-muted" style="font-size:13px;text-align:center;padding:24px;">
+                        로딩 중…
+                    </div>
+                    <div id="surveyQuestionList" style="display:none;"></div>
+                </div>
+                <div class="modal-footer" style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;">
+                        <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">공유 링크</span>
+                        <span id="surveyShareUrl" style="font-size:12px;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;"></span>
+                        <button class="btn-copy" id="surveyShareCopyBtn" style="flex-shrink:0;" onclick="copySurveyLink()">복사</button>
+                    </div>
+                    <button class="btn btn-primary" style="flex-shrink:0;" onclick="saveSurveyQuestions()">저장</button>
+                </div>
             </div>
         </div>
     </main>
@@ -772,6 +806,128 @@
             }
         };
     })();
+</script>
+
+<!-- ── 설문 문항 관리 모달 JS ─────────────────────────── -->
+<script>
+    let surveyCurrentTrackId = null;
+    let surveyCurrentUrl     = null;
+
+    async function openSurveyModal(btn) {
+        surveyCurrentTrackId = btn.dataset.trackId;
+        surveyCurrentUrl     = btn.dataset.surveyUrl;
+
+        document.getElementById('surveyModalTrackName').textContent = btn.dataset.trackName;
+        document.getElementById('surveyShareUrl').textContent       = surveyCurrentUrl;
+        document.getElementById('surveyLoadingMsg').style.display   = 'block';
+        document.getElementById('surveyQuestionList').style.display = 'none';
+        document.getElementById('surveyModal').classList.add('open');
+
+        try {
+            const res  = await fetch(`/api/v1/survey/questions?trackId=${surveyCurrentTrackId}`);
+            const data = await res.json();
+            renderSurveyQuestions(data.data || []);
+        } catch (e) {
+            document.getElementById('surveyLoadingMsg').textContent = '문항 로드 실패';
+        }
+    }
+
+    function closeSurveyModal() {
+        document.getElementById('surveyModal').classList.remove('open');
+    }
+
+    function renderSurveyQuestions(questions) {
+        const list = document.getElementById('surveyQuestionList');
+        list.innerHTML = questions.map(q => {
+            const badge = q.questionType === 'SCORE'
+                ? `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#EBF5FF;color:#1F4E79;font-weight:600;margin-right:6px;">점수 ${q.minScore}-${q.maxScore}</span>`
+                : `<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:#F0F4F8;color:#6C757D;font-weight:600;margin-right:6px;">텍스트</span>`;
+            return `
+            <div class="survey-q-row" data-qid="${q.id}"
+                 style="display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;color:var(--text-muted);min-width:18px;padding-top:2px;">${q.questionOrder}.</span>
+                <div style="flex:1;min-width:0;">
+                    <div style="margin-bottom:4px;">${badge}</div>
+                    <span class="survey-q-text" id="survey-q-text-${q.id}"
+                          style="font-size:14px;word-break:break-all;">${sqEsc(q.questionText)}</span>
+                    <input class="form-control survey-q-input" id="survey-q-input-${q.id}"
+                           style="display:none;margin-top:4px;font-size:13px;"
+                           value="${sqEsc(q.questionText)}">
+                </div>
+                <button class="btn btn-outline" style="font-size:11px;padding:3px 8px;flex-shrink:0;"
+                        onclick="toggleEditSurveyQ(${q.id})">✏️</button>
+            </div>`;
+        }).join('');
+
+        document.getElementById('surveyLoadingMsg').style.display   = 'none';
+        document.getElementById('surveyQuestionList').style.display = 'block';
+    }
+
+    function toggleEditSurveyQ(qid) {
+        const textEl  = document.getElementById(`survey-q-text-${qid}`);
+        const inputEl = document.getElementById(`survey-q-input-${qid}`);
+        const editing = inputEl.style.display !== 'none';
+        if (editing) {
+            textEl.textContent    = inputEl.value;
+            textEl.style.display  = 'inline';
+            inputEl.style.display = 'none';
+        } else {
+            inputEl.value         = textEl.textContent;
+            textEl.style.display  = 'none';
+            inputEl.style.display = 'block';
+            inputEl.focus();
+        }
+    }
+
+    async function saveSurveyQuestions() {
+        const rows = document.querySelectorAll('.survey-q-row[data-qid]');
+        const questions = [];
+        rows.forEach(row => {
+            const qid     = row.dataset.qid;
+            const inputEl = document.getElementById(`survey-q-input-${qid}`);
+            const textEl  = document.getElementById(`survey-q-text-${qid}`);
+            const text    = (inputEl.style.display !== 'none') ? inputEl.value : textEl.textContent;
+            questions.push({ id: parseInt(qid), questionText: text.trim() });
+        });
+
+        try {
+            const res  = await fetch(`/api/v1/survey/questions?trackId=${surveyCurrentTrackId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questions }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                renderSurveyQuestions(data.data || []);
+                alert('저장되었습니다.');
+            } else {
+                alert('저장 실패: ' + (data.message || '알 수 없는 오류'));
+            }
+        } catch (e) {
+            alert('저장 중 오류가 발생했습니다.');
+        }
+    }
+
+    function copySurveyLink() {
+        const btn = document.getElementById('surveyShareCopyBtn');
+        function markCopied() {
+            btn.textContent = '복사됨!';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+        }
+        navigator.clipboard.writeText(surveyCurrentUrl).then(markCopied).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = surveyCurrentUrl;
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+            document.body.appendChild(ta); ta.focus(); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+            markCopied();
+        });
+    }
+
+    function sqEsc(str) {
+        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 </script>
 
 <!-- ── 공통 유틸 + Chart.js ───────────────────────────── -->

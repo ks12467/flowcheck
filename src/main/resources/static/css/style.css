@@ -697,3 +697,7 @@ input[type=checkbox].toggle { width: 40px; height: 22px; accent-color: var(--pri
 .flex { display: flex; align-items: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 .gap-8 { gap: 8px; }
+
+/* ── Bootstrap 모달 backdrop 투명도 ────────── */
+.modal-backdrop { opacity: 0.6 !important; }
+.modal-backdrop.show { opacity: 0.6 !important; }
