@@ -386,12 +386,18 @@
 
         let satCurrentTrackId = null;
 
+        const initSatCourseType = satCourseTypes[0] ?? null;
+        const initSatTrackId    = initSatCourseType ? (satCourseTypeMap[initSatCourseType][0]?.trackId ?? null) : null;
+
         initTrackSelector({
             container: document.getElementById('satTrackSelectorContainer'),
             idPrefix: 'dash-sat',
             compact: true,
             getCourseTypes: async () => satCourseTypes,
             getTracksByCourseType: async (ct) => satCourseTypeMap[ct] || [],
+            initialCourseType: initSatCourseType,
+            initialTrackId: initSatTrackId,
+            triggerOnInit: initSatTrackId != null,
             onSelect(trackId) {
                 satCurrentTrackId = trackId || null;
                 window.onSatTrackChange();
@@ -442,6 +448,9 @@
                     opt.value = name; opt.textContent = name;
                     uploadSel.appendChild(opt);
                 });
+                // 가장 최근(마지막) 업로드 자동 선택
+                uploadSel.value = names[names.length - 1];
+                await window.onSatUploadChange();
             } catch (e) {
                 document.getElementById('satSelectMsg').textContent = '업로드 목록 로드 실패';
             }
@@ -554,12 +563,18 @@
 
         let npsCurrentTrackId = null;
 
+        const initNpsCourseType = npsCourseTypes[0] ?? null;
+        const initNpsTrackId    = initNpsCourseType ? (npsCourseTypeMap[initNpsCourseType][0]?.trackId ?? null) : null;
+
         initTrackSelector({
             container: document.getElementById('npsTrackSelectorContainer'),
             idPrefix: 'dash-nps',
             compact: true,
             getCourseTypes: async () => npsCourseTypes,
             getTracksByCourseType: async (ct) => npsCourseTypeMap[ct] || [],
+            initialCourseType: initNpsCourseType,
+            initialTrackId: initNpsTrackId,
+            triggerOnInit: initNpsTrackId != null,
             onSelect(trackId) {
                 npsCurrentTrackId = trackId || null;
                 window.onNpsTrackChange();
@@ -592,6 +607,9 @@
                     opt.textContent = name;
                     uploadSel.appendChild(opt);
                 });
+                // 가장 최근(마지막) 업로드 자동 선택
+                uploadSel.value = names[names.length - 1];
+                await window.onNpsUploadChange();
             } catch (e) {
                 document.getElementById('npsSelectMsg').textContent = '업로드 목록 로드 실패';
             }
