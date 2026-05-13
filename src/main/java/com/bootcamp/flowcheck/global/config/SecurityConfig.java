@@ -16,7 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+// TODO: 테스트 후 원복 — @EnableMethodSecurity(prePostEnabled = true) 로 변경
+@EnableMethodSecurity(prePostEnabled = false)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -32,17 +33,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers("/progress/**").permitAll()
-                        // [사용성 테스트] PM 웹 페이지 - 로그인 없이 접근 허용 (되돌릴 때 이 블록 삭제)
+                        // TODO: 테스트 후 원복 — 아래 1줄 삭제하고 원래 설정 블록 주석 해제
+                        .anyRequest().permitAll()
+                        /*
+                        // ── 원래 설정 (테스트 종료 후 아래 주석 해제 + 위 .anyRequest().permitAll() 삭제) ──
                         .requestMatchers("/dashboard", "/tracks/**", "/admin/nps", "/admin/satisfaction").permitAll()
-                        // [사용성 테스트] PM API - 로그인 없이 접근 허용 (되돌릴 때 이 블록 삭제)
                         .requestMatchers("/api/v1/tracks/**").permitAll()
                         .requestMatchers("/api/v1/admin/nps/**").permitAll()
                         .requestMatchers("/api/v1/admin/satisfaction/**").permitAll()
                         .requestMatchers("/api/v1/survey/**").permitAll()
-                        // 그 외 어드민 DELETE는 ADMIN만
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/**").hasRole("ADMIN")
-                        // 나머지는 인증된 사용자 모두 허용
                         .anyRequest().authenticated()
+                        */
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")

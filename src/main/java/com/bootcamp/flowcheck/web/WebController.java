@@ -51,13 +51,29 @@ public class WebController {
     // 인증된 모든 요청에 PM 정보와 사이드바 트랙 목록을 주입
     @ModelAttribute
     public void addCommonAttributes(Model model, Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) return;
+        Long pmId = extractPmId(authentication);
+        if (pmId != null) {
+            try {
+                pmRepository.findById(pmId).ifPresent(pm -> model.addAttribute("pm", pm));
+                model.addAttribute("sidebarTracks", trackRepository.findAllByPmId(pmId));
+            } catch (Exception ignored) {
+                // DB 오류(스키마 불일치 등)가 페이지 렌더링을 막지 않도록 방어 처리
+            }
+        } else {
+            // TODO: 테스트 후 원복 — 비인증 시 모든 트랙 노출
+            try {
+                model.addAttribute("sidebarTracks", trackRepository.findAll());
+            } catch (Exception ignored) { /* DB 오류 방어 */ }
+        }
+    }
+
+    /** 인증된 PM의 ID를 반환. 미인증(anonymous)이면 null. */
+    private Long extractPmId(Authentication authentication) {
+        if (authentication == null) return null;
         try {
-            Long pmId = Long.parseLong(authentication.getName());
-            pmRepository.findById(pmId).ifPresent(pm -> model.addAttribute("pm", pm));
-            model.addAttribute("sidebarTracks", trackRepository.findAllByPmId(pmId));
-        } catch (Exception ignored) {
-            // DB 오류(스키마 불일치 등)가 페이지 렌더링을 막지 않도록 방어 처리
+            return Long.parseLong(authentication.getName());
+        } catch (NumberFormatException e) {
+            return null; // anonymous user
         }
     }
 
@@ -92,8 +108,11 @@ public class WebController {
 
     @GetMapping("/dashboard")
     public String dashboard(Model model, Authentication authentication, HttpServletRequest request) {
-        Long pmId = Long.parseLong(authentication.getName());
-        List<Track> tracks = trackRepository.findAllByPmId(pmId);
+        Long pmId = extractPmId(authentication);
+        // TODO: 테스트 후 원복 — pmId != null 조건 추가 후 findAllByPmId(pmId) 단독 사용
+        List<Track> tracks = pmId != null
+                ? trackRepository.findAllByPmId(pmId)
+                : trackRepository.findAll();
         List<Long> trackIds = tracks.stream().map(Track::getId).toList();
 
         // 즉시면담 수강생
@@ -162,11 +181,12 @@ public class WebController {
                            @RequestParam(required = false) String riskLevel,
                            @RequestParam(required = false) String keyword,
                            Model model, Authentication authentication) {
-        Long pmId = Long.parseLong(authentication.getName());
+        Long pmId = extractPmId(authentication);
 
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
-        if (!pmTrackRepository.existsByPm_IdAndTrack_Id(pmId, trackId)) {
+        // TODO: 테스트 후 원복 — pmId != null 조건 제거
+        if (pmId != null && !pmTrackRepository.existsByPm_IdAndTrack_Id(pmId, trackId)) {
             return "redirect:/dashboard";
         }
 
@@ -198,11 +218,12 @@ public class WebController {
     @GetMapping("/tracks/{trackId}/students/{studentId}")
     public String studentDetail(@PathVariable Long trackId, @PathVariable Long studentId,
                                 Model model, Authentication authentication) {
-        Long pmId = Long.parseLong(authentication.getName());
+        Long pmId = extractPmId(authentication);
 
         Track track = trackRepository.findById(trackId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TRACK_NOT_FOUND));
-        if (!pmTrackRepository.existsByPm_IdAndTrack_Id(pmId, trackId)) {
+        // TODO: 테스트 후 원복 — pmId != null 조건 제거
+        if (pmId != null && !pmTrackRepository.existsByPm_IdAndTrack_Id(pmId, trackId)) {
             return "redirect:/dashboard";
         }
 
@@ -321,7 +342,12 @@ public class WebController {
                 .stream().map(CourseResponse::of).toList();
         model.addAttribute("track", track);
         model.addAttribute("courses", courses);
-        model.addAttribute("questions", surveyQuestionService.getQuestions(trackId));
+        try {
+            model.addAttribute("questions", surveyQuestionService.getQuestions(trackId));
+        } catch (Exception e) {
+            log.warn("[ProgressForm] 설문 문항 로드 실패 trackId={}: {}", trackId, e.getMessage());
+            model.addAttribute("questions", List.of());
+        }
         return "progress-form";
     }
 

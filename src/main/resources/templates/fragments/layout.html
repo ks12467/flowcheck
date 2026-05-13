@@ -37,8 +37,8 @@
                 </ul>
             </li>
 
-            <!-- 삭제 데이터 (ADMIN 전용) -->
-            <li th:if="${pm != null and pm.role == 'ADMIN'}">
+            <!-- 삭제 데이터 (ADMIN 전용) — TODO: 테스트 후 원복: pm != null and pm.role == 'ADMIN' 조건 복원 -->
+            <li th:if="${pm == null or pm.role == 'ADMIN'}">
                 <a th:href="@{/admin/deleted}" class="topnav-item">삭제 데이터</a>
             </li>
 
@@ -61,8 +61,11 @@
         </ul>
 
         <!-- 우측: PM 이름 + 로그아웃 -->
+        <!-- TODO: 테스트 후 원복 — th:if="${pm != null}" 조건 복원, 테스트 PM span 제거 -->
         <div class="topnav-right">
-            <span class="topnav-pm" th:if="${pm != null}" th:text="${pm.name} + ' PM'"></span>
+            <span class="topnav-pm"
+                  th:text="${pm != null ? pm.name + ' PM' : '테스트 PM'}"
+                  th:style="${pm == null ? 'opacity:.65;' : ''}"></span>
             <a th:href="@{/logout}" class="topnav-logout">로그아웃</a>
         </div>
 
@@ -77,7 +80,8 @@
             <li class="topnav-drawer-section">운영 관리</li>
             <li><a th:href="@{/admin/tracks}" class="topnav-drawer-item topnav-drawer-sub">트랙 관리</a></li>
             <li><a th:href="@{/admin/pms}"    class="topnav-drawer-item topnav-drawer-sub">PM 관리</a></li>
-            <li th:if="${pm != null and pm.role == 'ADMIN'}">
+            <!-- TODO: 테스트 후 원복: pm != null and pm.role == 'ADMIN' 조건 복원 -->
+            <li th:if="${pm == null or pm.role == 'ADMIN'}">
                 <a th:href="@{/admin/deleted}" class="topnav-drawer-item">삭제 데이터</a>
             </li>
             <th:block th:if="${sidebarTracks != null and !#lists.isEmpty(sidebarTracks)}">
@@ -89,9 +93,11 @@
                     <li><a th:href="@{/admin/satisfaction(trackId=${t.id})}" class="topnav-drawer-item topnav-drawer-sub">만족도 분석</a></li>
                 </th:block>
             </th:block>
-            <li th:if="${pm != null}">
+            <!-- TODO: 테스트 후 원복 — th:if="${pm != null}" 조건 복원, 테스트 PM span 제거 -->
+            <li>
                 <div class="topnav-drawer-footer">
-                    <span th:text="${pm.name} + ' PM'"></span>
+                    <span th:if="${pm != null}" th:text="${pm.name} + ' PM'"></span>
+                    <span th:if="${pm == null}" style="opacity:.65;">테스트 PM</span>
                     <a th:href="@{/logout}" class="topnav-logout" style="margin-left:auto;">로그아웃</a>
                 </div>
             </li>

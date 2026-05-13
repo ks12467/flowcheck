@@ -9,6 +9,11 @@ spring:
       maximum-pool-size: 10
       connection-timeout: 30000
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
   thymeleaf:
     cache: true
 
