@@ -13,8 +13,6 @@ public interface LearningProgressRepository extends JpaRepository<LearningProgre
 
     Optional<LearningProgress> findTopByStudent_IdOrderBySubmittedAtDesc(Long studentId);
 
-    List<LearningProgress> findTop10ByStudent_IdOrderBySubmittedAtDesc(Long studentId);
-
     @Query("""
             SELECT lp FROM LearningProgress lp
             WHERE lp.student.id IN :studentIds

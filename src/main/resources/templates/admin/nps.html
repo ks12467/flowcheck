@@ -171,6 +171,136 @@
         <div id="noDataMsg" class="card" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
             선택한 트랙의 NPS 데이터가 없습니다. 위에서 엑셀 파일을 업로드해주세요.
         </div>
+
+        <!-- ── AI 분석 리포트 ──────────────────────────── -->
+        <div id="aiReportSection" style="display:none;margin-top:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h2 style="font-size:18px;font-weight:700;margin:0;">🤖 AI 분석 리포트</h2>
+                <button id="aiReportBtn" class="btn btn-primary" onclick="generateAiReport()"
+                        style="display:flex;align-items:center;gap:8px;">
+                    <span id="aiReportBtnIcon">✨</span>
+                    <span id="aiReportBtnText">AI 분석 리포트 생성</span>
+                </button>
+            </div>
+
+            <!-- 로딩 -->
+            <div id="aiReportLoading" style="display:none;text-align:center;padding:48px 0;">
+                <div class="ai-spinner"></div>
+                <div style="margin-top:16px;font-size:14px;color:var(--text-muted);">Gemini AI가 분석 중입니다…</div>
+            </div>
+
+            <!-- 결과 -->
+            <div id="aiReportResult" style="display:none;">
+
+                <!-- 1. 제출현황 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">📋 제출현황</div>
+                    <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+                        <div style="font-size:15px;">총원: <strong id="aiTotalStudents">-</strong>명</div>
+                        <div style="font-size:15px;">제출: <strong id="aiSubmittedCount" style="color:var(--success);">-</strong>명</div>
+                        <div style="font-size:15px;">미제출: <strong id="aiNotSubmittedCount" style="color:var(--danger);">-</strong>명</div>
+                    </div>
+                    <div id="aiNotSubmittedList" style="display:none;">
+                        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">미제출자 목록</div>
+                        <div id="aiNotSubmittedNames" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                    </div>
+                </div>
+
+                <!-- 2. NPS 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">📊 NPS 분석</div>
+
+                    <!-- 비추천 0~6 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:14px;font-weight:700;color:var(--danger);margin-bottom:10px;">
+                            👎 비추천 (NPS 0~6) — <span id="aiDetractorCount">0</span>명
+                        </div>
+                        <div id="aiDetractorTable" style="margin-bottom:12px;"></div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--danger);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                            <div id="aiDetractorAnalysis" class="ai-markdown"></div>
+                        </div>
+                    </div>
+
+                    <!-- 중립 7~8 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:14px;font-weight:700;color:var(--caution);margin-bottom:10px;">
+                            😐 중립 (NPS 7~8) — <span id="aiPassiveCount">0</span>명
+                        </div>
+                        <div id="aiPassiveTable" style="margin-bottom:12px;"></div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--caution);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                            <div id="aiPassiveAnalysis" class="ai-markdown"></div>
+                        </div>
+                    </div>
+
+                    <!-- 추천 9~10 -->
+                    <div>
+                        <div style="font-size:14px;font-weight:700;color:var(--success);margin-bottom:10px;">
+                            👍 추천 (NPS 9~10) — <span id="aiPromoterCount">0</span>명
+                        </div>
+                        <div id="aiPromoterTable" style="margin-bottom:12px;"></div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--success);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                            <div id="aiPromoterAnalysis" class="ai-markdown"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. NPS 변동 인원 -->
+                <div class="card ai-report-card" id="aiChangeSection">
+                    <div class="card-title">📈 NPS 변동 인원</div>
+                    <div id="aiChangePrevLabel" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;"></div>
+                    <div class="grid-2" style="gap:16px;margin-bottom:16px;">
+                        <div>
+                            <div style="font-size:13px;font-weight:600;color:var(--danger);margin-bottom:8px;">📉 하락 — <span id="aiDeclinedCount">0</span>명</div>
+                            <div id="aiDeclinedList"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:13px;font-weight:600;color:var(--success);margin-bottom:8px;">📈 상승 — <span id="aiImprovedCount">0</span>명</div>
+                            <div id="aiImprovedList"></div>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                        <div id="aiNpsChangeAnalysis" class="ai-markdown"></div>
+                    </div>
+                </div>
+
+                <!-- 4. 난이도 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">🎯 난이도 분석</div>
+                    <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                        <div id="aiDifficultyAnalysis" class="ai-markdown"></div>
+                    </div>
+                </div>
+
+                <!-- 5. SSC 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">💡 SSC 분석</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="ai-ssc-grid">
+                        <div style="background:#f0fdf4;border-radius:var(--radius);padding:16px;border-left:4px solid var(--success);">
+                            <div style="font-size:13px;font-weight:700;color:var(--success);margin-bottom:10px;">🚀 Start</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">새롭게 시도해볼 것</div>
+                            <div id="aiSscStart" class="ai-markdown"></div>
+                        </div>
+                        <div style="background:#fff5f5;border-radius:var(--radius);padding:16px;border-left:4px solid var(--danger);">
+                            <div style="font-size:13px;font-weight:700;color:var(--danger);margin-bottom:10px;">🛑 Stop</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">개선하거나 그만둘 것</div>
+                            <div id="aiSscStop" class="ai-markdown"></div>
+                        </div>
+                        <div style="background:#eff6ff;border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                            <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">✅ Continue</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">계속 유지할 것</div>
+                            <div id="aiSscContinue" class="ai-markdown"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /aiReportResult -->
+        </div><!-- /aiReportSection -->
+
     </main>
 </div>
 
@@ -288,6 +418,31 @@
     }
     @media (max-width: 600px) {
         #avgGrid { grid-template-columns: repeat(2, 1fr) !important; }
+    }
+    /* AI 리포트 */
+    .ai-report-card { margin-bottom: 16px; }
+    .ai-markdown { font-size: 13px; line-height: 1.75; color: var(--text); }
+    .ai-markdown p  { margin: 0 0 8px; }
+    .ai-markdown ul { margin: 0 0 8px; padding-left: 20px; }
+    .ai-markdown li { margin-bottom: 4px; }
+    .ai-markdown strong { font-weight: 700; }
+    .ai-markdown h3 { font-size: 14px; font-weight: 700; margin: 12px 0 6px; }
+    .ai-nps-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+    .ai-nps-table th { background: var(--bg); font-weight: 600; padding: 6px 10px; text-align: left; border-bottom: 1.5px solid var(--border); }
+    .ai-nps-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .ai-nps-table tr:last-child td { border-bottom: none; }
+    .ai-change-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .ai-change-item:last-child { border-bottom: none; }
+    .ai-spinner {
+        width: 40px; height: 40px; margin: 0 auto;
+        border: 4px solid var(--border);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: ai-spin .8s linear infinite;
+    }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    @media (max-width: 700px) {
+        .ai-ssc-grid { grid-template-columns: 1fr !important; }
     }
 </style>
 
@@ -602,6 +757,13 @@
 
         document.getElementById('analysisSection').style.display = 'block';
 
+        // AI 리포트 섹션 활성화 (탭 변경 시 결과 초기화)
+        const aiSec = document.getElementById('aiReportSection');
+        aiSec.style.display = 'block';
+        document.getElementById('aiReportResult').style.display = 'none';
+        document.getElementById('aiReportLoading').style.display = 'none';
+        resetAiReportBtn();
+
         // ── NPS 지수 ────────────────────────────────
         const score    = d.npsScore;
         const scoreEl  = document.getElementById('npsScoreVal');
@@ -739,11 +901,154 @@
         document.getElementById('analysisSection').style.display = 'none';
         document.getElementById('noDataMsg').style.display = 'none';
         document.getElementById('uploadMsg').style.display = 'none';
+        document.getElementById('aiReportSection').style.display = 'none';
+        document.getElementById('aiReportResult').style.display = 'none';
+        document.getElementById('aiReportLoading').style.display = 'none';
     }
 
     function esc(str) {
         return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+
+    // ── AI 분석 리포트 ─────────────────────────────────
+
+    function resetAiReportBtn() {
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = false;
+        document.getElementById('aiReportBtnIcon').textContent = '✨';
+        document.getElementById('aiReportBtnText').textContent = 'AI 분석 리포트 생성';
+    }
+
+    async function generateAiReport() {
+        if (!currentTrackId || !activeUploadName) {
+            alert('트랙과 업로드를 먼저 선택해주세요.');
+            return;
+        }
+
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = true;
+        document.getElementById('aiReportBtnIcon').textContent = '⏳';
+        document.getElementById('aiReportBtnText').textContent = '분석 중...';
+        document.getElementById('aiReportLoading').style.display = 'block';
+        document.getElementById('aiReportResult').style.display = 'none';
+
+        try {
+            const res  = await fetch(
+                `/api/v1/admin/nps/ai-report?trackId=${currentTrackId}&uploadName=${encodeURIComponent(activeUploadName)}`,
+                { method: 'POST' });
+            const json = await res.json();
+
+            if (!res.ok) {
+                alert(json.message || 'AI 분석 중 오류가 발생했습니다.');
+                resetAiReportBtn();
+                document.getElementById('aiReportLoading').style.display = 'none';
+                return;
+            }
+
+            renderAiReport(json.data);
+        } catch (e) {
+            console.error('[AI Report]', e);
+            alert('네트워크 오류가 발생했습니다.');
+            resetAiReportBtn();
+        } finally {
+            document.getElementById('aiReportLoading').style.display = 'none';
+        }
+    }
+
+    function renderAiReport(d) {
+        // 1. 제출현황
+        document.getElementById('aiTotalStudents').textContent   = d.totalStudents;
+        document.getElementById('aiSubmittedCount').textContent  = d.submittedCount;
+        document.getElementById('aiNotSubmittedCount').textContent = d.notSubmitted.length;
+
+        const notSubmittedEl = document.getElementById('aiNotSubmittedList');
+        if (d.notSubmitted.length > 0) {
+            notSubmittedEl.style.display = 'block';
+            document.getElementById('aiNotSubmittedNames').innerHTML =
+                d.notSubmitted.map(n => `<span class="badge badge-warning">${esc(n)}</span>`).join('');
+        } else {
+            notSubmittedEl.style.display = 'none';
+        }
+
+        // 2. NPS 분석 — 수강생 테이블
+        document.getElementById('aiDetractorCount').textContent = d.detractors.length;
+        document.getElementById('aiPassiveCount').textContent   = d.passives.length;
+        document.getElementById('aiPromoterCount').textContent  = d.promoters.length;
+
+        document.getElementById('aiDetractorTable').innerHTML = renderNpsTable(d.detractors);
+        document.getElementById('aiPassiveTable').innerHTML   = renderNpsTable(d.passives);
+        document.getElementById('aiPromoterTable').innerHTML  = renderNpsTable(d.promoters);
+
+        // Gemini 분석 텍스트 (마크다운)
+        renderMd('aiDetractorAnalysis', d.detractorAnalysis);
+        renderMd('aiPassiveAnalysis',   d.passiveAnalysis);
+        renderMd('aiPromoterAnalysis',  d.promoterAnalysis);
+
+        // 3. NPS 변동 인원
+        const changeSection = document.getElementById('aiChangeSection');
+        if (d.hasPreviousUpload) {
+            changeSection.style.display = 'block';
+            document.getElementById('aiChangePrevLabel').textContent =
+                `이전 업로드(${d.previousUploadName})와 비교`;
+            document.getElementById('aiDeclinedCount').textContent = d.declined.length;
+            document.getElementById('aiImprovedCount').textContent = d.improved.length;
+            document.getElementById('aiDeclinedList').innerHTML = renderChangeList(d.declined, 'danger');
+            document.getElementById('aiImprovedList').innerHTML = renderChangeList(d.improved, 'success');
+            renderMd('aiNpsChangeAnalysis', d.npsChangeAnalysis);
+        } else {
+            changeSection.style.display = 'none';
+        }
+
+        // 4. 난이도 분석
+        renderMd('aiDifficultyAnalysis', d.difficultyAnalysis);
+
+        // 5. SSC 분석
+        renderMd('aiSscStart',    d.sscStart);
+        renderMd('aiSscStop',     d.sscStop);
+        renderMd('aiSscContinue', d.sscContinue);
+
+        document.getElementById('aiReportResult').style.display = 'block';
+
+        // 버튼 완료 상태
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = false;
+        document.getElementById('aiReportBtnIcon').textContent = '🔄';
+        document.getElementById('aiReportBtnText').textContent = '리포트 재생성';
+    }
+
+    function renderNpsTable(entries) {
+        if (!entries.length) return '<p style="color:var(--text-muted);font-size:13px;">해당 없음</p>';
+        return `<table class="ai-nps-table">
+            <thead><tr><th>이름</th><th>NPS</th><th>운영만족도</th><th>NPS 코멘트</th><th>운영 코멘트</th></tr></thead>
+            <tbody>${entries.map(e => `
+                <tr>
+                    <td><strong>${esc(e.name)}</strong></td>
+                    <td style="text-align:center;">${e.nps ?? '-'}</td>
+                    <td style="text-align:center;">${e.opsSatisfaction ?? '-'}</td>
+                    <td style="max-width:240px;">${esc(e.npsComment || '-')}</td>
+                    <td style="max-width:240px;">${esc(e.opsComment || '-')}</td>
+                </tr>`).join('')}
+            </tbody></table>`;
+    }
+
+    function renderChangeList(changes, colorKey) {
+        if (!changes.length) return '<p style="color:var(--text-muted);font-size:13px;">없음</p>';
+        const arrow = colorKey === 'danger' ? '▼' : '▲';
+        return changes.map(c => `
+            <div class="ai-change-item">
+                <strong>${esc(c.name)}</strong>
+                <span>${c.previousNps} <span style="color:var(--${colorKey});">${arrow}</span> ${c.currentNps}</span>
+            </div>`).join('');
+    }
+
+    function renderMd(elementId, text) {
+        const el = document.getElementById(elementId);
+        if (!text) { el.innerHTML = '<p style="color:var(--text-muted);">-</p>'; return; }
+        el.innerHTML = typeof marked !== 'undefined'
+            ? marked.parse(text)
+            : text.replace(/\n/g, '<br>');
+    }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 </body>
 </html>

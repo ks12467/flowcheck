@@ -90,6 +90,7 @@ jobs:
               -e GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               -e ALLOWED_ORIGINS="${{ secrets.ALLOWED_ORIGINS }}" \
+              -e GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
               ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
 
             # 오래된 이미지 정리

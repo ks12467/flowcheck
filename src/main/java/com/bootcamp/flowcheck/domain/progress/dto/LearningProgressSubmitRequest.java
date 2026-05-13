@@ -27,5 +27,13 @@ public class LearningProgressSubmitRequest {
     @Max(value = 5, message = "난이도는 5 이하여야 합니다.")
     private Integer conditionScore;
 
+    @Min(value = 1, message = "이해도는 1 이상이어야 합니다.")
+    @Max(value = 5, message = "이해도는 5 이하여야 합니다.")
+    private Integer understandingScore;
+
+    @Min(value = 1, message = "몰입도는 1 이상이어야 합니다.")
+    @Max(value = 5, message = "몰입도는 5 이하여야 합니다.")
+    private Integer immersionScore;
+
     private String comment;
 }

@@ -55,6 +55,11 @@ CREATE TABLE IF NOT EXISTS SATISFACTION_RESULT (
     CONSTRAINT fk_satisfaction_result_track FOREIGN KEY (track_id) REFERENCES TRACK (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- LEARNING_PROGRESS 이해도/몰입도 점수 컬럼 추가 (즉시면담 조건 개선)
+ALTER TABLE LEARNING_PROGRESS
+    ADD COLUMN IF NOT EXISTS understanding_score INT NULL AFTER condition_score,
+    ADD COLUMN IF NOT EXISTS immersion_score     INT NULL AFTER understanding_score;
+
 -- 트랙별 설문 문항 테이블 (a8d3877 커밋에서 추가 — 설문 공유 링크에 필요)
 CREATE TABLE IF NOT EXISTS SURVEY_QUESTION (
     id             BIGINT       NOT NULL AUTO_INCREMENT,

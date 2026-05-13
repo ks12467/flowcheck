@@ -42,6 +42,12 @@ public class LearningProgress {
     @Column(name = "condition_score")
     private Integer conditionScore;
 
+    @Column(name = "understanding_score")
+    private Integer understandingScore;
+
+    @Column(name = "immersion_score")
+    private Integer immersionScore;
+
     @Column(name = "risk_level", length = 20)
     private String riskLevel;
 
@@ -57,8 +63,8 @@ public class LearningProgress {
     @Builder
     public LearningProgress(Student student, CourseWeek courseWeek, Integer lectureNumber,
                             String status, Integer assignmentProgress, Boolean tilWritten,
-                            Integer conditionScore, String riskLevel, String comment,
-                            LocalDateTime submittedAt) {
+                            Integer conditionScore, Integer understandingScore, Integer immersionScore,
+                            String riskLevel, String comment, LocalDateTime submittedAt) {
         this.student = student;
         this.courseWeek = courseWeek;
         this.lectureNumber = lectureNumber;
@@ -66,6 +72,8 @@ public class LearningProgress {
         this.assignmentProgress = assignmentProgress;
         this.tilWritten = tilWritten;
         this.conditionScore = conditionScore;
+        this.understandingScore = understandingScore;
+        this.immersionScore = immersionScore;
         this.riskLevel = riskLevel;
         this.comment = comment;
         this.submittedAt = submittedAt;

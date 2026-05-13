@@ -22,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,7 +68,8 @@ public class ProgressService {
 
         LocalDate today = LocalDate.now();
         String riskLevel = calculateRiskLevel(
-                request.getConditionScore(), request.getComment(), student.getId(), today);
+                request.getConditionScore(), request.getUnderstandingScore(),
+                request.getImmersionScore(), request.getComment(), student.getId(), today);
 
         LearningProgress progress = LearningProgress.builder()
                 .student(student)
@@ -79,6 +79,8 @@ public class ProgressService {
                 .assignmentProgress(request.getAssignmentProgress())
                 .tilWritten(request.getTilWritten())
                 .conditionScore(request.getConditionScore())
+                .understandingScore(request.getUnderstandingScore())
+                .immersionScore(request.getImmersionScore())
                 .riskLevel(riskLevel)
                 .comment(request.getComment())
                 .submittedAt(LocalDateTime.now())
@@ -147,44 +149,30 @@ public class ProgressService {
 
     // ── 위험군 자동 분류 ──────────────────────────────────────────────────────
 
-    private String calculateRiskLevel(Integer conditionScore, String comment, Long studentId, LocalDate today) {
+    private String calculateRiskLevel(Integer conditionScore, Integer understandingScore,
+                                      Integer immersionScore, String comment,
+                                      Long studentId, LocalDate today) {
         if (conditionScore == null) return "정상";
 
         boolean hasComment = comment != null && !comment.isBlank();
 
-        if (conditionScore >= 4 && hasComment) return "즉시면담";
-        if (conditionScore >= 4 && hasConsecutive3Days(studentId, 4, today)) return "즉시면담";
-        if (conditionScore == 3 && hasComment && hasConsecutive3Days(studentId, 3, today)) return "즉시면담";
-        if (conditionScore >= 4) return "주의";
+        List<Integer> scores = new ArrayList<>();
+        scores.add(conditionScore);
+        if (understandingScore != null) scores.add(understandingScore);
+        if (immersionScore != null) scores.add(immersionScore);
+
+        long countFive = scores.stream().filter(s -> s == 5).count();
+        long countFour = scores.stream().filter(s -> s == 4).count();
+
+        // 즉시면담 조건
+        if (countFive >= 1) return "즉시면담";
+        if (countFour >= 2) return "즉시면담";
+        if (countFour >= 1 && hasComment) return "즉시면담";
+
+        // 주의/관찰/정상
+        if (countFour >= 1) return "주의";
         if (conditionScore == 3 && hasComment) return "관찰";
         return "정상";
-    }
-
-    /**
-     * 해당 학생이 minScore 이상의 conditionScore로 3일 이상 연속 제출했는지 확인.
-     * today(오늘 제출 날짜)를 포함해서 계산한다.
-     */
-    private boolean hasConsecutive3Days(Long studentId, int minScore, LocalDate today) {
-        List<LearningProgress> recent = progressRepository.findTop10ByStudent_IdOrderBySubmittedAtDesc(studentId);
-
-        TreeSet<LocalDate> relevantDates = recent.stream()
-                .filter(p -> p.getConditionScore() != null && p.getConditionScore() >= minScore)
-                .map(p -> p.getSubmittedAt().toLocalDate())
-                .collect(Collectors.toCollection(TreeSet::new));
-
-        relevantDates.add(today); // 현재 제출 포함
-
-        List<LocalDate> sorted = new ArrayList<>(relevantDates);
-
-        int consecutive = 1;
-        for (int i = 1; i < sorted.size(); i++) {
-            if (sorted.get(i).equals(sorted.get(i - 1).plusDays(1))) {
-                if (++consecutive >= 3) return true;
-            } else {
-                consecutive = 1;
-            }
-        }
-        return false;
     }
 
     // ── 유사 수강생 비율 + 난이도 케이스 통계 ────────────────────────────────

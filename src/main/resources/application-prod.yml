@@ -50,6 +50,9 @@ google:
   sheets:
     credentials-path: file:/app/config/credentials.json
 
+gemini:
+  api-key: ${GEMINI_API_KEY}
+
 logging:
   level:
     root: INFO

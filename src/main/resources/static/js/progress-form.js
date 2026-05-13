@@ -4,16 +4,22 @@
 
 const courseSelect = document.getElementById('courseSelect');
 const weekSelect   = document.getElementById('weekSelect');
-let selectedScore      = null;   // primary SCORE 문항 점수 (conditionScore)
+let selectedScore      = null;   // 1번 SCORE 문항 점수 (conditionScore = 난이도)
 let selectedWeekId     = null;
 let selectedLectureNum = null;
 
 // ── 동적 설문 점수 버튼 ──────────────────────────────────────────────────────
 const questionScores = {};  // qid → selectedScore
 
+// SCORE 문항 순서대로 qid 추적 (2번=이해도, 3번=몰입도)
+const scoreQuestionIds = [];  // questionOrder 순 SCORE qid 목록
+
 document.querySelectorAll('.score-btn-q').forEach(btn => {
+    const qid = btn.dataset.qid;
+    if (!scoreQuestionIds.includes(qid)) {
+        scoreQuestionIds.push(qid);
+    }
     btn.addEventListener('click', function () {
-        const qid = this.dataset.qid;
         document.querySelectorAll(`.score-btn-q[data-qid="${qid}"]`)
                 .forEach(b => b.classList.remove('selected'));
         this.classList.add('selected');
@@ -116,6 +122,9 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
     const textQEl = document.querySelector('.survey-text-q');
     const comment = textQEl ? textQEl.value.trim() || null : null;
 
+    const understandingScore = scoreQuestionIds[1] ? (questionScores[scoreQuestionIds[1]] ?? null) : null;
+    const immersionScore     = scoreQuestionIds[2] ? (questionScores[scoreQuestionIds[2]] ?? null) : null;
+
     const body = {
         studentName:        studentName,
         courseWeekId:       selectedWeekId,
@@ -124,6 +133,8 @@ document.getElementById('submitBtn').addEventListener('click', async function ()
         assignmentProgress: parseInt(document.getElementById('assignmentRange').value),
         tilWritten:         document.getElementById('tilCheckbox').checked,
         conditionScore:     selectedScore,
+        understandingScore: understandingScore,
+        immersionScore:     immersionScore,
         comment:            comment,
     };
 
