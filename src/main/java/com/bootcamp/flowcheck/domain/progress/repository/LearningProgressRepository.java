@@ -86,13 +86,13 @@ public interface LearningProgressRepository extends JpaRepository<LearningProgre
      */
     @Query(value = """
             SELECT lp.condition_score, COUNT(DISTINCT lp.student_id) AS cnt
-            FROM learning_progress lp
+            FROM LEARNING_PROGRESS lp
             INNER JOIN (
                 SELECT student_id, MAX(submitted_at) AS latest
-                FROM learning_progress
+                FROM LEARNING_PROGRESS
                 WHERE submitted_at >= :threeDaysAgo
                   AND student_id IN (
-                      SELECT id FROM student WHERE track_id = :trackId
+                      SELECT id FROM STUDENT WHERE track_id = :trackId
                   )
                 GROUP BY student_id
             ) latest_lp

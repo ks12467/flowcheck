@@ -399,17 +399,18 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 }
 .form-card + .form-card { border-radius: 12px; margin-top: 12px; }
 .score-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.score-btn {
+.score-btn, .score-btn-q {
     padding: 10px 18px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
     background: #fff;
     font-size: 14px;
     font-weight: 600;
+    cursor: pointer;
     transition: all .15s;
 }
-.score-btn:hover { border-color: var(--primary); color: var(--primary); }
-.score-btn.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+.score-btn:hover, .score-btn-q:hover { border-color: var(--primary); color: var(--primary); }
+.score-btn.selected, .score-btn-q.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
 .range-wrap { display: flex; align-items: center; gap: 12px; }
 .range-wrap input[type=range] { flex: 1; accent-color: var(--primary); }
 .toggle-wrap { display: flex; align-items: center; gap: 12px; }
