@@ -165,8 +165,11 @@ public class WebController {
         }
         model.addAttribute("googleForms", googleForms);
 
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        String scheme = (forwardedProto != null && !forwardedProto.isEmpty())
+                ? forwardedProto.split(",")[0].trim()
+                : request.getScheme();
         int port = request.getServerPort();
-        String scheme = request.getScheme();
         String portStr = (("https".equals(scheme) && port == 443) || ("http".equals(scheme) && port == 80))
                 ? "" : ":" + port;
         model.addAttribute("baseUrl", scheme + "://" + request.getServerName() + portStr);

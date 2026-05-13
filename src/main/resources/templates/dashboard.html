@@ -860,6 +860,11 @@
         try {
             const res  = await fetch(`/api/v1/survey/questions?trackId=${surveyCurrentTrackId}`);
             const data = await res.json();
+            if (!res.ok) {
+                document.getElementById('surveyLoadingMsg').textContent =
+                    '문항 로드 실패: ' + (data.message || res.status);
+                return;
+            }
             renderSurveyQuestions(data.data || []);
         } catch (e) {
             document.getElementById('surveyLoadingMsg').textContent = '문항 로드 실패';
