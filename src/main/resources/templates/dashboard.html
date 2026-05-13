@@ -721,11 +721,17 @@
 
         let gfCurrentTrackId = null;
 
+        const initGfCourseType = gfCourseTypes[0] ?? null;
+        const initGfTrackId    = initGfCourseType ? (gfCourseTypeMap[initGfCourseType][0]?.trackId ?? null) : null;
+
         initTrackSelector({
             container: document.getElementById('gfTrackSelectorContainer'),
             idPrefix: 'dash-gf',
             getCourseTypes: async () => gfCourseTypes,
             getTracksByCourseType: async (ct) => gfCourseTypeMap[ct] || [],
+            initialCourseType: initGfCourseType,
+            initialTrackId: initGfTrackId,
+            triggerOnInit: initGfTrackId != null,
             onSelect(trackId) {
                 gfCurrentTrackId = trackId ? parseInt(trackId) : null;
                 onGfTrackChange();
@@ -741,12 +747,18 @@
 
             if (!trackId) { formSel.disabled = true; return; }
             formSel.disabled = false;
-            forms.filter(f => f.trackId === trackId).forEach(f => {
+            const trackForms = forms.filter(f => f.trackId === trackId);
+            trackForms.forEach(f => {
                 const opt = document.createElement('option');
                 opt.value = f.formId;
                 opt.textContent = f.name;
                 formSel.appendChild(opt);
             });
+            // 첫 번째 폼 자동 선택
+            if (trackForms.length > 0) {
+                formSel.value = String(trackForms[0].formId);
+                onGfFormChange();
+            }
         };
 
         const prevScores = {};
