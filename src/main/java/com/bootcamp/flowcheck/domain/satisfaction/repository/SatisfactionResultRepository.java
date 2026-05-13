@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,11 +18,13 @@ public interface SatisfactionResultRepository extends JpaRepository<Satisfaction
            "ORDER BY s.uploadName ASC")
     List<String> findDistinctUploadNamesByTrackId(@Param("trackId") Long trackId);
 
-    @Modifying
+    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM SatisfactionResult s WHERE s.track.id = :trackId AND s.uploadName = :uploadName")
     void deleteAllByTrackIdAndUploadName(@Param("trackId") Long trackId, @Param("uploadName") String uploadName);
 
-    @Modifying
+    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE SatisfactionResult s SET s.uploadName = :newName " +
            "WHERE s.track.id = :trackId AND s.uploadName = :oldName")
     int renameUploadName(@Param("trackId") Long trackId,
