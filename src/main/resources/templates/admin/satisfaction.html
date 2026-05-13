@@ -321,8 +321,7 @@
 
     // ── 인라인 이름 수정 ────────────────────────────────────────────
     function startRename(trackId, name, wrapper) {
-        if (wrapper.classList.contains('editing')) return;
-        wrapper.classList.add('editing');
+        if (wrapper.classList.contains('tab-edit-wrapper')) return;
         wrapper.innerHTML = '';
         wrapper.className = 'tab-edit-wrapper';
 
