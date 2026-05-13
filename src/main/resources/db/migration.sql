@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS NPS_RESULT (
     id                     BIGINT       NOT NULL AUTO_INCREMENT,
     track_id               BIGINT       NOT NULL,
     name                   VARCHAR(255) NOT NULL,
-    `class`                VARCHAR(255) NULL,
+    class_name             VARCHAR(255) NULL,
     specialty              VARCHAR(255) NULL,
     difficulty             INT          NULL,
     skill                  INT          NULL,
@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS NPS_RESULT (
     PRIMARY KEY (id),
     CONSTRAINT fk_nps_result_track FOREIGN KEY (track_id) REFERENCES TRACK (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- NPS_RESULT 컬럼 이름 변경: `class` → class_name (Hibernate 7 예약어 호환 수정)
+-- 이미 NPS_RESULT 테이블이 존재하는 환경(로컬/운영)에서 아래 ALTER 문을 수동 실행하세요.
+ALTER TABLE NPS_RESULT CHANGE COLUMN `class` class_name VARCHAR(255) NULL;
 
 -- 주차별 만족도 결과 테이블 (ed54331 커밋에서 추가)
 CREATE TABLE IF NOT EXISTS SATISFACTION_RESULT (

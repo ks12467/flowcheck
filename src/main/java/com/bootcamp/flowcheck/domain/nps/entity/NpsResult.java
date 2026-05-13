@@ -25,7 +25,7 @@ public class NpsResult {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "`class`")
+    @Column(name = "class_name")
     private String className;
 
     private String specialty;

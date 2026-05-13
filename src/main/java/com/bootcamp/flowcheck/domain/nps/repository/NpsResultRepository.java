@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,11 +18,13 @@ public interface NpsResultRepository extends JpaRepository<NpsResult, Long> {
     @Query("SELECT DISTINCT n.uploadName FROM NpsResult n WHERE n.track.id = :trackId AND n.uploadName IS NOT NULL AND n.uploadName <> '' ORDER BY n.uploadName ASC")
     List<String> findDistinctUploadNamesByTrackId(@Param("trackId") Long trackId);
 
-    @Modifying
+    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM NpsResult n WHERE n.track.id = :trackId AND n.uploadName = :uploadName")
     void deleteAllByTrackIdAndUploadName(@Param("trackId") Long trackId, @Param("uploadName") String uploadName);
 
-    @Modifying
+    @Transactional
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE NpsResult n SET n.uploadName = :newName WHERE n.track.id = :trackId AND n.uploadName = :oldName")
     int renameUploadName(@Param("trackId") Long trackId, @Param("oldName") String oldName, @Param("newName") String newName);
 }
