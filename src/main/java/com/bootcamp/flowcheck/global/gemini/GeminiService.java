@@ -13,7 +13,7 @@ import org.springframework.web.client.RestTemplate;
 public class GeminiService {
 
     private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=";
 
     private final String apiKey;
     private final RestTemplate restTemplate;
