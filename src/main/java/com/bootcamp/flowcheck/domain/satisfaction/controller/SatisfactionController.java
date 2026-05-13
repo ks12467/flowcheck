@@ -1,5 +1,6 @@
 package com.bootcamp.flowcheck.domain.satisfaction.controller;
 
+import com.bootcamp.flowcheck.domain.satisfaction.dto.SatisfactionAiReportResponse;
 import com.bootcamp.flowcheck.domain.satisfaction.dto.SatisfactionAnalysisResponse;
 import com.bootcamp.flowcheck.domain.satisfaction.service.SatisfactionService;
 import com.bootcamp.flowcheck.global.response.ApiResponse;
@@ -84,5 +85,23 @@ public class SatisfactionController {
         return ResponseEntity.ok(ApiResponse.success(
                 satisfactionService.analyze(trackId, uploadName),
                 "만족도 분석 결과를 조회했습니다."));
+    }
+
+    /** POST /api/v1/admin/satisfaction/ai-report?trackId=1&uploadName=3주차 — Gemini AI 분석 리포트 */
+    @PostMapping("/ai-report")
+    public ResponseEntity<ApiResponse<SatisfactionAiReportResponse>> aiReport(
+            @RequestParam Long trackId,
+            @RequestParam String uploadName) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success(
+                    satisfactionService.buildAiReport(trackId, uploadName),
+                    "AI 분석 리포트가 생성되었습니다."));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.fail(e.getMessage()));
+        } catch (RuntimeException e) {
+            log.error("[Satisfaction AI] 리포트 생성 실패: {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.fail("AI 분석 중 오류가 발생했습니다: " + e.getMessage()));
+        }
     }
 }

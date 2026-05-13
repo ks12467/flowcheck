@@ -124,6 +124,171 @@
         <div id="noDataMsg" class="card" style="display:none;text-align:center;padding:32px;color:var(--text-muted);">
             선택한 트랙의 만족도 데이터가 없습니다. 위에서 엑셀 파일을 업로드해주세요.
         </div>
+
+        <!-- ── AI 분석 리포트 ──────────────────────────── -->
+        <div id="aiReportSection" style="display:none;margin-top:24px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h2 style="font-size:18px;font-weight:700;margin:0;">🤖 AI 분석 리포트</h2>
+                <button id="aiReportBtn" class="btn btn-primary" onclick="generateAiReport()"
+                        style="display:flex;align-items:center;gap:8px;">
+                    <span id="aiReportBtnIcon">✨</span>
+                    <span id="aiReportBtnText">AI 분석 리포트 생성</span>
+                </button>
+            </div>
+
+            <!-- 로딩 -->
+            <div id="aiReportLoading" style="display:none;text-align:center;padding:48px 0;">
+                <div class="ai-spinner"></div>
+                <div style="margin-top:16px;font-size:14px;color:var(--text-muted);">Gemini AI가 분석 중입니다…</div>
+            </div>
+
+            <!-- 결과 -->
+            <div id="aiReportResult" style="display:none;">
+
+                <!-- 1. 온라인 강의 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">🎓 온라인 강의 분석</div>
+                    <div style="margin-bottom:16px;overflow-x:auto;">
+                        <table class="ai-sat-table">
+                            <thead>
+                                <tr><th>항목</th><th>평균</th><th>만점</th></tr>
+                            </thead>
+                            <tbody id="aiLectureTable"></tbody>
+                        </table>
+                    </div>
+                    <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                        <div id="aiLectureAnalysis" class="ai-markdown"></div>
+                    </div>
+                </div>
+
+                <!-- 2. 개인과제 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">📝 개인과제 분석</div>
+                    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;">
+                        <div class="ai-stat-box">
+                            <div class="ai-stat-label">평균</div>
+                            <div id="aiAssignAvg" class="ai-stat-val">-</div>
+                            <div class="ai-stat-sub">/ 5점</div>
+                        </div>
+                        <div class="ai-stat-box">
+                            <div class="ai-stat-label">중앙값</div>
+                            <div id="aiAssignMedian" class="ai-stat-val">-</div>
+                            <div class="ai-stat-sub">/ 5점</div>
+                        </div>
+                        <div class="ai-stat-box">
+                            <div class="ai-stat-label">최빈값</div>
+                            <div id="aiAssignMode" class="ai-stat-val">-</div>
+                            <div class="ai-stat-sub">/ 5점</div>
+                        </div>
+                    </div>
+                    <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                        <div id="aiAssignmentAnalysis" class="ai-markdown"></div>
+                    </div>
+                </div>
+
+                <!-- 3. 운영 및 서포트 피드백 VOC -->
+                <div class="card ai-report-card">
+                    <div class="card-title">💡 운영 및 서포트 피드백 — SSC 분석</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;" class="ai-ssc-grid">
+                        <div style="background:#f0fdf4;border-radius:var(--radius);padding:16px;border-left:4px solid var(--success);">
+                            <div style="font-size:13px;font-weight:700;color:var(--success);margin-bottom:6px;">🚀 Start</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">새롭게 시도해볼 것</div>
+                            <div id="aiSscStart" class="ai-markdown"></div>
+                        </div>
+                        <div style="background:#fff5f5;border-radius:var(--radius);padding:16px;border-left:4px solid var(--danger);">
+                            <div style="font-size:13px;font-weight:700;color:var(--danger);margin-bottom:6px;">🛑 Stop</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">개선하거나 그만둘 것</div>
+                            <div id="aiSscStop" class="ai-markdown"></div>
+                        </div>
+                        <div style="background:#eff6ff;border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                            <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:6px;">✅ Continue</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">계속 유지할 것</div>
+                            <div id="aiSscContinue" class="ai-markdown"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 커리큘럼 만족도 및 난이도 분석 -->
+                <div class="card ai-report-card">
+                    <div class="card-title">📚 커리큘럼 만족도 및 난이도 분석</div>
+
+                    <!-- I. 커리큘럼 만족도 재검토 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">I. 커리큘럼 만족도 재검토</div>
+                        <table class="ai-sat-table" style="max-width:360px;margin-bottom:12px;">
+                            <thead><tr><th>통계</th><th>값</th></tr></thead>
+                            <tbody>
+                                <tr><td>평균</td><td id="aiSatAvg">-</td></tr>
+                                <tr><td>중앙값</td><td id="aiSatMedian">-</td></tr>
+                                <tr><td>최빈값</td><td id="aiSatMode">-</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- II. 커리큘럼 난이도 재검토 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">II. 커리큘럼 난이도 재검토</div>
+                        <table class="ai-sat-table" style="max-width:360px;margin-bottom:12px;">
+                            <thead><tr><th>통계</th><th>값</th></tr></thead>
+                            <tbody>
+                                <tr><td>평균</td><td id="aiDiffAvg">-</td></tr>
+                                <tr><td>중앙값</td><td id="aiDiffMedian">-</td></tr>
+                                <tr><td>최빈값</td><td id="aiDiffMode">-</td></tr>
+                            </tbody>
+                        </table>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--primary);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석 결론 (I·II)</div>
+                            <div id="aiCurriculumConclusion" class="ai-markdown"></div>
+                        </div>
+                    </div>
+
+                    <!-- III. 수강생별 난이도-만족도 관계 분석 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">III. 수강생별 난이도-만족도 관계 분석</div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--caution);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석</div>
+                            <div id="aiStudentRelationship" class="ai-markdown"></div>
+                        </div>
+                    </div>
+
+                    <!-- IV. 난이도 최고 체감 그룹 -->
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">IV. 난이도 최고 체감 그룹 (4·5점) 집중 분석</div>
+                        <div style="overflow-x:auto;margin-bottom:12px;">
+                            <table class="ai-sat-table" id="aiDiffGroupTable">
+                                <thead><tr><th>난이도 점수</th><th>수강생 수</th><th>레벨</th><th>만족도 평균</th></tr></thead>
+                                <tbody id="aiDiffGroupBody"></tbody>
+                            </table>
+                        </div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--danger);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 시사점</div>
+                            <div id="aiDiffGroupInsights" class="ai-markdown"></div>
+                        </div>
+                    </div>
+
+                    <!-- V. 저만족 그룹 분석 -->
+                    <div>
+                        <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">
+                            V. 저만족 그룹 분석 (만족도 6점 이하) — <span id="aiLowSatCount">0</span>명
+                        </div>
+                        <div style="overflow-x:auto;margin-bottom:12px;">
+                            <table class="ai-sat-table">
+                                <thead><tr><th>이름</th><th>만족도</th><th>난이도</th></tr></thead>
+                                <tbody id="aiLowSatBody"></tbody>
+                            </table>
+                        </div>
+                        <div style="background:var(--bg);border-radius:var(--radius);padding:16px;border-left:4px solid var(--danger);">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">🤖 Gemini 분석 + 유형별 개선방안</div>
+                            <div id="aiLowSatAnalysis" class="ai-markdown"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /aiReportResult -->
+        </div><!-- /aiReportSection -->
+
     </main>
 </div>
 
@@ -198,6 +363,32 @@
         font-size: 13px; margin-bottom: 4px; color: var(--text);
     }
     .sat-bar-val { font-weight: 600; }
+    /* AI 리포트 */
+    .ai-report-card { margin-bottom: 16px; }
+    .ai-markdown { font-size: 13px; line-height: 1.75; color: var(--text); }
+    .ai-markdown p  { margin: 0 0 8px; }
+    .ai-markdown ul { margin: 0 0 8px; padding-left: 20px; }
+    .ai-markdown li { margin-bottom: 4px; }
+    .ai-markdown strong { font-weight: 700; }
+    .ai-markdown h3 { font-size: 14px; font-weight: 700; margin: 12px 0 6px; }
+    .ai-markdown table { border-collapse: collapse; width: 100%; font-size: 13px; margin-bottom: 8px; }
+    .ai-markdown th { background: var(--bg); font-weight: 600; padding: 6px 10px; text-align: left; border: 1px solid var(--border); }
+    .ai-markdown td { padding: 6px 10px; border: 1px solid var(--border); vertical-align: top; }
+    .ai-sat-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .ai-sat-table th { background: var(--bg); font-weight: 600; padding: 7px 12px; text-align: left; border-bottom: 1.5px solid var(--border); }
+    .ai-sat-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); }
+    .ai-sat-table tr:last-child td { border-bottom: none; }
+    .ai-stat-box { text-align: center; padding: 12px 20px; border: 1.5px solid var(--border); border-radius: var(--radius); }
+    .ai-stat-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .ai-stat-val { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1; }
+    .ai-stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .ai-spinner {
+        width: 40px; height: 40px; margin: 0 auto;
+        border: 4px solid var(--border); border-top-color: var(--primary);
+        border-radius: 50%; animation: ai-spin .8s linear infinite;
+    }
+    @keyframes ai-spin { to { transform: rotate(360deg); } }
+    @media (max-width: 700px) { .ai-ssc-grid { grid-template-columns: 1fr !important; } }
 </style>
 
 <script th:inline="javascript">
@@ -485,6 +676,12 @@
         // ── 자유의견 ─────────────────────────────────
         renderComments('freeCommentList',      'freeCommentCount',      d.freeComments);
         renderComments('operationCommentList', 'operationCommentCount', d.operationComments);
+
+        // AI 리포트 섹션 활성화 (탭 변경 시 결과 초기화)
+        document.getElementById('aiReportSection').style.display = 'block';
+        document.getElementById('aiReportResult').style.display = 'none';
+        document.getElementById('aiReportLoading').style.display = 'none';
+        resetAiReportBtn();
     }
 
     function renderBars(containerId, items, d) {
@@ -546,11 +743,145 @@
         document.getElementById('analysisSection').style.display = 'none';
         document.getElementById('noDataMsg').style.display = 'none';
         document.getElementById('uploadMsg').style.display = 'none';
+        document.getElementById('aiReportSection').style.display = 'none';
+        document.getElementById('aiReportResult').style.display = 'none';
+        document.getElementById('aiReportLoading').style.display = 'none';
     }
 
     function esc(str) {
         return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+
+    // ── AI 분석 리포트 ─────────────────────────────────
+
+    function resetAiReportBtn() {
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = false;
+        document.getElementById('aiReportBtnIcon').textContent = '✨';
+        document.getElementById('aiReportBtnText').textContent = 'AI 분석 리포트 생성';
+    }
+
+    async function generateAiReport() {
+        if (!currentTrackId || !activeUploadName) {
+            alert('트랙과 업로드를 먼저 선택해주세요.');
+            return;
+        }
+
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = true;
+        document.getElementById('aiReportBtnIcon').textContent = '⏳';
+        document.getElementById('aiReportBtnText').textContent = '분석 중...';
+        document.getElementById('aiReportLoading').style.display = 'block';
+        document.getElementById('aiReportResult').style.display = 'none';
+
+        try {
+            const res  = await fetch(
+                `/api/v1/admin/satisfaction/ai-report?trackId=${currentTrackId}&uploadName=${encodeURIComponent(activeUploadName)}`,
+                { method: 'POST' });
+            const json = await res.json();
+
+            if (!res.ok) {
+                alert(json.message || 'AI 분석 중 오류가 발생했습니다.');
+                resetAiReportBtn();
+                document.getElementById('aiReportLoading').style.display = 'none';
+                return;
+            }
+
+            renderAiReport(json.data);
+        } catch (e) {
+            console.error('[AI Report]', e);
+            alert('네트워크 오류가 발생했습니다.');
+            resetAiReportBtn();
+        } finally {
+            document.getElementById('aiReportLoading').style.display = 'none';
+        }
+    }
+
+    function renderAiReport(d) {
+        // 1. 강의 분석 테이블
+        const lectureRows = [
+            { label: '전달력',   val: d.avgLectureDelivery },
+            { label: '교재',     val: d.avgLectureMaterial },
+            { label: '품질',     val: d.avgLectureQuality },
+            { label: '체감 난이도', val: d.avgLectureDifficulty },
+            { label: '추천도',   val: d.avgLectureNps },
+        ];
+        document.getElementById('aiLectureTable').innerHTML =
+            lectureRows.map(r => `<tr><td>${esc(r.label)}</td><td><strong>${r.val.toFixed(1)}</strong></td><td>5점</td></tr>`).join('');
+        renderMd('aiLectureAnalysis', d.lectureAnalysis);
+
+        // 2. 과제 분석
+        document.getElementById('aiAssignAvg').textContent    = d.assignmentAvg.toFixed(1);
+        document.getElementById('aiAssignMedian').textContent = d.assignmentMedian.toFixed(1);
+        document.getElementById('aiAssignMode').textContent   = d.assignmentMode;
+        renderMd('aiAssignmentAnalysis', d.assignmentAnalysis);
+
+        // 3. SSC
+        renderMd('aiSscStart',    d.sscStart);
+        renderMd('aiSscStop',     d.sscStop);
+        renderMd('aiSscContinue', d.sscContinue);
+
+        // 4-I. 만족도 통계
+        document.getElementById('aiSatAvg').textContent    = d.curriculumSatisfactionStats.avg.toFixed(1);
+        document.getElementById('aiSatMedian').textContent = d.curriculumSatisfactionStats.median.toFixed(1);
+        document.getElementById('aiSatMode').textContent   = d.curriculumSatisfactionStats.mode;
+
+        // 4-II. 난이도 통계
+        document.getElementById('aiDiffAvg').textContent    = d.curriculumDifficultyStats.avg.toFixed(1);
+        document.getElementById('aiDiffMedian').textContent = d.curriculumDifficultyStats.median.toFixed(1);
+        document.getElementById('aiDiffMode').textContent   = d.curriculumDifficultyStats.mode;
+        renderMd('aiCurriculumConclusion', d.curriculumConclusion);
+
+        // 4-III. 수강생 관계 분석
+        renderMd('aiStudentRelationship', d.studentRelationshipAnalysis);
+
+        // 4-IV. 난이도 그룹
+        const diffGroupBody = document.getElementById('aiDiffGroupBody');
+        if (!d.difficultyGroups || d.difficultyGroups.length === 0) {
+            diffGroupBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">해당 없음</td></tr>';
+        } else {
+            diffGroupBody.innerHTML = d.difficultyGroups.map(g =>
+                `<tr>
+                    <td style="text-align:center;"><strong>${g.score}점</strong></td>
+                    <td style="text-align:center;">${g.count}명</td>
+                    <td>${esc(g.level)}</td>
+                    <td style="text-align:center;">${g.avgSatisfaction.toFixed(1)}</td>
+                </tr>`).join('');
+        }
+        renderMd('aiDiffGroupInsights', d.difficultyGroupInsights);
+
+        // 4-V. 저만족 그룹
+        document.getElementById('aiLowSatCount').textContent = d.lowSatStudents?.length ?? 0;
+        const lowBody = document.getElementById('aiLowSatBody');
+        if (!d.lowSatStudents || d.lowSatStudents.length === 0) {
+            lowBody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">해당 없음</td></tr>';
+        } else {
+            lowBody.innerHTML = d.lowSatStudents.map(s =>
+                `<tr>
+                    <td><strong>${esc(s.name)}</strong></td>
+                    <td style="text-align:center;color:var(--danger);">${s.curriculumSatisfaction ?? '-'}</td>
+                    <td style="text-align:center;">${s.curriculumDifficulty ?? '-'}</td>
+                </tr>`).join('');
+        }
+        renderMd('aiLowSatAnalysis', d.lowSatisfactionAnalysis);
+
+        document.getElementById('aiReportResult').style.display = 'block';
+
+        // 버튼 완료 상태
+        const btn = document.getElementById('aiReportBtn');
+        btn.disabled = false;
+        document.getElementById('aiReportBtnIcon').textContent = '🔄';
+        document.getElementById('aiReportBtnText').textContent = '리포트 재생성';
+    }
+
+    function renderMd(elementId, text) {
+        const el = document.getElementById(elementId);
+        if (!text) { el.innerHTML = '<p style="color:var(--text-muted);">-</p>'; return; }
+        el.innerHTML = typeof marked !== 'undefined'
+            ? marked.parse(text)
+            : text.replace(/\n/g, '<br>');
+    }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 </body>
 </html>
