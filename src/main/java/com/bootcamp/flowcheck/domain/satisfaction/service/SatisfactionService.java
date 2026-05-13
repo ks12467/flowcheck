@@ -33,7 +33,7 @@ public class SatisfactionService {
     private final SatisfactionResultRepository satisfactionRepository;
     private final TrackRepository trackRepository;
     private final GeminiService geminiService;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 업로드 이름 목록 반환 */
     @Transactional(readOnly = true)

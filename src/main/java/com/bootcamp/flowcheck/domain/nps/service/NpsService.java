@@ -36,7 +36,7 @@ public class NpsService {
     private final TrackRepository trackRepository;
     private final StudentRepository studentRepository;
     private final GeminiService geminiService;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** 업로드 이름 목록 반환 */
     @Transactional(readOnly = true)

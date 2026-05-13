@@ -17,14 +17,11 @@ public class GeminiService {
 
     private final String apiKey;
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public GeminiService(
-            @Value("${gemini.api-key:}") String apiKey,
-            ObjectMapper objectMapper) {
-        this.apiKey      = apiKey;
+    public GeminiService(@Value("${gemini.api-key:}") String apiKey) {
+        this.apiKey       = apiKey;
         this.restTemplate = new RestTemplate();
-        this.objectMapper = objectMapper;
     }
 
     /**
