@@ -166,12 +166,18 @@ public class WebController {
         model.addAttribute("googleForms", googleForms);
 
         String forwardedProto = request.getHeader("X-Forwarded-Proto");
-        String scheme = (forwardedProto != null && !forwardedProto.isEmpty())
-                ? forwardedProto.split(",")[0].trim()
-                : request.getScheme();
-        int port = request.getServerPort();
-        String portStr = (("https".equals(scheme) && port == 443) || ("http".equals(scheme) && port == 80))
-                ? "" : ":" + port;
+        String scheme;
+        String portStr;
+        if (forwardedProto != null && !forwardedProto.isEmpty()) {
+            // 리버스 프록시 뒤: scheme만 교체, 포트는 프록시가 처리하므로 생략
+            scheme = forwardedProto.split(",")[0].trim();
+            portStr = "";
+        } else {
+            scheme = request.getScheme();
+            int port = request.getServerPort();
+            portStr = (("https".equals(scheme) && port == 443) || ("http".equals(scheme) && port == 80))
+                    ? "" : ":" + port;
+        }
         model.addAttribute("baseUrl", scheme + "://" + request.getServerName() + portStr);
 
         return "dashboard";
